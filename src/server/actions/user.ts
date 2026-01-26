@@ -13,7 +13,7 @@ export async function updateProfile(input: UpdateProfileInput) {
 
   const validated = updateProfileSchema.safeParse(input);
   if (!validated.success) {
-    return { error: validated.error.errors[0].message };
+    return { error: validated.error.issues[0].message };
   }
 
   try {
