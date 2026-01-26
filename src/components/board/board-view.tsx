@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   DragDropContext,
@@ -50,6 +50,11 @@ export function BoardView({
   const [issues, setIssues] = useState(initialIssues);
   const [selectedIssue, setSelectedIssue] = useState<IssueWithRelations | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
+
+  // Sync local state when server data changes (e.g., after router.refresh())
+  useEffect(() => {
+    setIssues(initialIssues);
+  }, [initialIssues]);
 
   const {
     filters,
