@@ -25,7 +25,7 @@ export default async function ProjectBacklogPage({
   }
 
   const issues = await getBacklogIssues(project.id);
-  const members = workspace.members.map((m) => m.user);
+  const members = workspace.members.map((m: { user: { id: string; name: string | null; email: string; image: string | null } }) => m.user);
 
   return (
     <div className="p-6">
