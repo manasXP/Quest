@@ -16,7 +16,7 @@ export function mockAuthenticatedUser(user: {
   name?: string;
   image?: string;
 }) {
-  vi.mocked(auth).mockResolvedValue({
+  (vi.mocked(auth) as any).mockResolvedValue({
     user: {
       id: user.id,
       email: user.email ?? `${user.id}@test.com`,
@@ -27,5 +27,5 @@ export function mockAuthenticatedUser(user: {
 }
 
 export function mockUnauthenticated() {
-  vi.mocked(auth).mockResolvedValue(null);
+  (vi.mocked(auth) as any).mockResolvedValue(null);
 }

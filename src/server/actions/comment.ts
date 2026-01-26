@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { createCommentSchema, updateCommentSchema } from "@/lib/validations/comment";
 import { logActivity } from "./activity";
+import { notifyCommentAdded } from "./notification";
 
 export async function getCommentsByIssue(issueId: string) {
   return db.comment.findMany({
@@ -80,6 +81,8 @@ export async function createComment(data: {
       },
     });
 
+    const projectPath = `/workspace/${issue.project.workspace.slug}/project/${issue.project.key}`;
+
     // Log activity
     await logActivity({
       action: "COMMENT_ADDED",
@@ -87,7 +90,18 @@ export async function createComment(data: {
       actorId: session.user.id,
     });
 
-    revalidatePath(`/workspace/${issue.project.workspace.slug}/project/${issue.project.key}`);
+    // Notify reporter and assignee
+    await notifyCommentAdded({
+      issueId: issue.id,
+      issueKey: issue.key,
+      issueTitle: issue.title,
+      commentAuthorId: session.user.id,
+      reporterId: issue.reporterId,
+      assigneeId: issue.assigneeId,
+      projectPath,
+    });
+
+    revalidatePath(projectPath);
     return { data: comment };
   } catch (error) {
     console.error("Failed to create comment:", error);

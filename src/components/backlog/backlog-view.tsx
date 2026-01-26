@@ -14,9 +14,12 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Checkbox } from "@/components/ui/checkbox";
 import { IssueDetailPanel } from "@/components/issue/issue-detail-panel";
 import { IssueFilters } from "@/components/filters/issue-filters";
+import { BulkActionBar } from "@/components/bulk-actions/bulk-action-bar";
 import { useIssueFilters } from "@/hooks/use-issue-filters";
+import { useSelection } from "@/hooks/use-selection";
 import type { Issue, User, IssueType, IssuePriority, IssueStatus } from "@prisma/client";
 
 type IssueWithRelations = Issue & {
@@ -27,6 +30,7 @@ type IssueWithRelations = Issue & {
 };
 
 interface BacklogViewProps {
+  projectId: string;
   issues: IssueWithRelations[];
   members: Pick<User, "id" | "name" | "email" | "image">[];
   currentUserId: string;
@@ -63,7 +67,7 @@ const statusLabels: Record<IssueStatus, string> = {
   CANCELLED: "Cancelled",
 };
 
-export function BacklogView({ issues, members, currentUserId }: BacklogViewProps) {
+export function BacklogView({ projectId, issues, members, currentUserId }: BacklogViewProps) {
   const router = useRouter();
   const [selectedIssue, setSelectedIssue] = useState<IssueWithRelations | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
@@ -73,13 +77,29 @@ export function BacklogView({ issues, members, currentUserId }: BacklogViewProps
     filteredIssues,
     updateFilter,
     clearFilters,
+    loadFilters,
     hasActiveFilters,
   } = useIssueFilters({
     issues,
     getIssue: (issue) => issue,
   });
 
-  const handleRowClick = (issue: IssueWithRelations) => {
+  const {
+    selectedIds,
+    selectedCount,
+    isSelected,
+    toggle,
+    toggleAll,
+    deselectAll,
+    isAllSelected,
+    isPartiallySelected,
+  } = useSelection({ items: filteredIssues });
+
+  const handleRowClick = (issue: IssueWithRelations, e: React.MouseEvent) => {
+    // Don't open detail if clicking on checkbox
+    if ((e.target as HTMLElement).closest('[data-checkbox]')) {
+      return;
+    }
     setSelectedIssue(issue);
     setDetailOpen(true);
   };
@@ -109,8 +129,10 @@ export function BacklogView({ issues, members, currentUserId }: BacklogViewProps
           filters={filters}
           onFilterChange={updateFilter}
           onClearFilters={clearFilters}
+          onLoadFilters={loadFilters}
           hasActiveFilters={hasActiveFilters}
           members={members}
+          projectId={projectId}
         />
       </div>
 
@@ -118,6 +140,18 @@ export function BacklogView({ issues, members, currentUserId }: BacklogViewProps
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-[40px]">
+                <Checkbox
+                  checked={isAllSelected}
+                  ref={(el) => {
+                    if (el) {
+                      (el as any).indeterminate = isPartiallySelected;
+                    }
+                  }}
+                  onCheckedChange={toggleAll}
+                  aria-label="Select all"
+                />
+              </TableHead>
               <TableHead className="w-[80px]">Type</TableHead>
               <TableHead className="w-[100px]">Key</TableHead>
               <TableHead>Title</TableHead>
@@ -132,9 +166,20 @@ export function BacklogView({ issues, members, currentUserId }: BacklogViewProps
               return (
                 <TableRow
                   key={issue.id}
-                  className="cursor-pointer"
-                  onClick={() => handleRowClick(issue)}
+                  className={cn(
+                    "cursor-pointer",
+                    isSelected(issue.id) && "bg-slate-50 dark:bg-slate-800/50"
+                  )}
+                  onClick={(e) => handleRowClick(issue, e)}
                 >
+                  <TableCell data-checkbox>
+                    <Checkbox
+                      checked={isSelected(issue.id)}
+                      onCheckedChange={() => toggle(issue.id)}
+                      onClick={(e) => e.stopPropagation()}
+                      aria-label={`Select ${issue.key}`}
+                    />
+                  </TableCell>
                   <TableCell>
                     <TypeIcon
                       className={cn("h-4 w-4", typeColors[issue.type])}
@@ -182,6 +227,14 @@ export function BacklogView({ issues, members, currentUserId }: BacklogViewProps
           </TableBody>
         </Table>
       </div>
+
+      <BulkActionBar
+        selectedIds={selectedIds}
+        selectedCount={selectedCount}
+        onClear={deselectAll}
+        onSuccess={handleRefresh}
+        members={members}
+      />
 
       <IssueDetailPanel
         issue={selectedIssue}

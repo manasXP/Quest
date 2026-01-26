@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { WorkspaceSwitcher } from "@/components/workspace/workspace-switcher";
+import { NotificationDropdown } from "@/components/notifications/notification-dropdown";
 import type { User, Workspace } from "@prisma/client";
 
 interface DashboardHeaderProps {
@@ -42,6 +43,7 @@ export function DashboardHeader({
         </div>
 
         <div className="ml-auto flex items-center gap-2">
+          <NotificationDropdown />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-8 w-8 rounded-full">

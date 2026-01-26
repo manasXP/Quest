@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { X, Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,6 +11,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { SearchInput } from "./search-input";
+import { SaveFilterDialog } from "./save-filter-dialog";
+import { SavedFiltersDropdown } from "./saved-filters-dropdown";
 import type { IssueFilters } from "@/lib/validations/search";
 import type { User } from "@prisma/client";
 
@@ -20,8 +23,10 @@ interface IssueFiltersProps {
     value: IssueFilters[K]
   ) => void;
   onClearFilters: () => void;
+  onLoadFilters?: (filters: IssueFilters) => void;
   hasActiveFilters: boolean;
   members: Pick<User, "id" | "name" | "email" | "image">[];
+  projectId?: string;
 }
 
 const statusOptions = [
@@ -52,9 +57,23 @@ export function IssueFilters({
   filters,
   onFilterChange,
   onClearFilters,
+  onLoadFilters,
   hasActiveFilters,
   members,
+  projectId,
 }: IssueFiltersProps) {
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  const handleFilterSaved = () => {
+    setRefreshTrigger((prev) => prev + 1);
+  };
+
+  const handleSelectFilter = (savedFilters: IssueFilters) => {
+    if (onLoadFilters) {
+      onLoadFilters(savedFilters);
+    }
+  };
+
   const toggleArrayFilter = <K extends keyof IssueFilters>(
     key: K,
     value: string
@@ -137,6 +156,22 @@ export function IssueFilters({
           <X className="mr-1 h-4 w-4" />
           Clear
         </Button>
+      )}
+
+      {projectId && (
+        <>
+          <SavedFiltersDropdown
+            projectId={projectId}
+            onSelectFilter={handleSelectFilter}
+            refreshTrigger={refreshTrigger}
+          />
+          <SaveFilterDialog
+            projectId={projectId}
+            filters={filters}
+            onSuccess={handleFilterSaved}
+            disabled={!hasActiveFilters}
+          />
+        </>
       )}
     </div>
   );

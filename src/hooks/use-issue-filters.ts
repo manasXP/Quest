@@ -87,6 +87,10 @@ export function useIssueFilters<T>({ issues, getIssue }: UseIssueFiltersOptions<
     setFilters({});
   }, []);
 
+  const loadFilters = useCallback((newFilters: IssueFilters) => {
+    setFilters(newFilters);
+  }, []);
+
   const hasActiveFilters = useMemo((): boolean => {
     return Boolean(
       filters.search ||
@@ -103,6 +107,7 @@ export function useIssueFilters<T>({ issues, getIssue }: UseIssueFiltersOptions<
     filteredIssues,
     updateFilter,
     clearFilters,
+    loadFilters,
     hasActiveFilters,
   };
 }

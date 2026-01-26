@@ -9,6 +9,7 @@ import {
   moveIssueSchema,
 } from "@/lib/validations/issue";
 import { logActivity } from "./activity";
+import { notifyIssueAssigned, notifyIssueCompleted } from "./notification";
 import type { IssueStatus } from "@prisma/client";
 
 async function getNextIssueNumber(projectId: string): Promise<number> {
@@ -207,6 +208,8 @@ export async function updateIssue(
       },
     });
 
+    const projectPath = `/workspace/${issue.project.workspace.slug}/project/${issue.project.key}`;
+
     // Log activities for specific changes
     if (validated.data.status && validated.data.status !== issue.status) {
       await logActivity({
@@ -219,6 +222,18 @@ export async function updateIssue(
           newValue: validated.data.status,
         },
       });
+
+      // Notify reporter when issue is completed
+      if (validated.data.status === "DONE") {
+        await notifyIssueCompleted({
+          issueId: issue.id,
+          issueKey: issue.key,
+          issueTitle: issue.title,
+          reporterId: issue.reporterId,
+          actorId: session.user.id,
+          projectPath,
+        });
+      }
     }
 
     if (validated.data.assigneeId !== undefined && validated.data.assigneeId !== issue.assigneeId) {
@@ -232,6 +247,18 @@ export async function updateIssue(
           newValue: validated.data.assigneeId,
         },
       });
+
+      // Notify new assignee
+      if (validated.data.assigneeId) {
+        await notifyIssueAssigned({
+          issueId: issue.id,
+          issueKey: issue.key,
+          issueTitle: issue.title,
+          assigneeId: validated.data.assigneeId,
+          actorId: session.user.id,
+          projectPath,
+        });
+      }
     }
 
     if (validated.data.priority && validated.data.priority !== issue.priority) {
@@ -324,6 +351,8 @@ export async function moveIssue(data: {
       },
     });
 
+    const projectPath = `/workspace/${issue.project.workspace.slug}/project/${issue.project.key}`;
+
     // Log status change if status actually changed
     if (validated.data.status !== issue.status) {
       await logActivity({
@@ -336,11 +365,21 @@ export async function moveIssue(data: {
           newValue: validated.data.status,
         },
       });
+
+      // Notify reporter when issue is completed
+      if (validated.data.status === "DONE") {
+        await notifyIssueCompleted({
+          issueId: issue.id,
+          issueKey: issue.key,
+          issueTitle: issue.title,
+          reporterId: issue.reporterId,
+          actorId: session.user.id,
+          projectPath,
+        });
+      }
     }
 
-    revalidatePath(
-      `/workspace/${issue.project.workspace.slug}/project/${issue.project.key}`
-    );
+    revalidatePath(projectPath);
     return { data: updated };
   } catch (error) {
     console.error("Failed to move issue:", error);

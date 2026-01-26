@@ -51,6 +51,7 @@ export default async function ProjectBacklogPage({
       </div>
 
       <BacklogView
+        projectId={project.id}
         issues={issues}
         members={members}
         currentUserId={session.user.id}

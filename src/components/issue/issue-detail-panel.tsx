@@ -24,6 +24,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CommentList } from "@/components/comment/comment-list";
 import { ActivityFeed } from "@/components/activity/activity-feed";
+import { SubtaskList } from "@/components/subtask/subtask-list";
 import { updateIssue, deleteIssue } from "@/server/actions/issue";
 import type { Issue, User, IssueType, IssueStatus, IssuePriority } from "@prisma/client";
 
@@ -245,11 +246,15 @@ export function IssueDetailPanel({
 
           <Separator />
 
-          <Tabs defaultValue="comments" className="w-full">
+          <Tabs defaultValue="subtasks" className="w-full">
             <TabsList variant="line" className="w-full justify-start">
+              <TabsTrigger value="subtasks">Subtasks</TabsTrigger>
               <TabsTrigger value="comments">Comments</TabsTrigger>
               <TabsTrigger value="activity">Activity</TabsTrigger>
             </TabsList>
+            <TabsContent value="subtasks" className="mt-4">
+              <SubtaskList parentId={issue.id} parentType={issue.type} />
+            </TabsContent>
             <TabsContent value="comments" className="mt-4">
               <CommentList issueId={issue.id} currentUserId={currentUserId} />
             </TabsContent>

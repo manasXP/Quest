@@ -15,7 +15,9 @@ import { IssueCard } from "@/components/issue/issue-card";
 import { IssueDetailPanel } from "@/components/issue/issue-detail-panel";
 import { CreateIssueDialog } from "@/components/issue/create-issue-dialog";
 import { IssueFilters } from "@/components/filters/issue-filters";
+import { BulkActionBar } from "@/components/bulk-actions/bulk-action-bar";
 import { useIssueFilters } from "@/hooks/use-issue-filters";
+import { useSelection } from "@/hooks/use-selection";
 import { moveIssue } from "@/server/actions/issue";
 import type { Issue, Project, User, IssueStatus } from "@prisma/client";
 
@@ -61,11 +63,20 @@ export function BoardView({
     filteredIssues,
     updateFilter,
     clearFilters,
+    loadFilters,
     hasActiveFilters,
   } = useIssueFilters({
     issues,
     getIssue: (issue) => issue,
   });
+
+  const {
+    selectedIds,
+    selectedCount,
+    isSelected,
+    toggle,
+    deselectAll,
+  } = useSelection({ items: filteredIssues });
 
   const getIssuesByStatus = useCallback(
     (status: IssueStatus) => {
@@ -124,7 +135,13 @@ export function BoardView({
     });
   };
 
-  const handleIssueClick = (issue: IssueWithRelations) => {
+  const handleIssueClick = (issue: IssueWithRelations, e: React.MouseEvent) => {
+    // Ctrl/Cmd + click for multi-select
+    if (e.ctrlKey || e.metaKey) {
+      e.preventDefault();
+      toggle(issue.id);
+      return;
+    }
     setSelectedIssue(issue);
     setDetailOpen(true);
   };
@@ -145,8 +162,10 @@ export function BoardView({
             filters={filters}
             onFilterChange={updateFilter}
             onClearFilters={clearFilters}
+            onLoadFilters={loadFilters}
             hasActiveFilters={hasActiveFilters}
             members={members}
+            projectId={project.id}
           />
           <CreateIssueDialog
             projectId={project.id}
@@ -196,8 +215,9 @@ export function BoardView({
                             >
                               <IssueCard
                                 issue={issue}
-                                onClick={() => handleIssueClick(issue)}
+                                onClick={(e) => handleIssueClick(issue, e)}
                                 isDragging={snapshot.isDragging}
+                                isSelected={isSelected(issue.id)}
                               />
                             </div>
                           )}
@@ -212,6 +232,14 @@ export function BoardView({
           </div>
         </div>
       </DragDropContext>
+
+      <BulkActionBar
+        selectedIds={selectedIds}
+        selectedCount={selectedCount}
+        onClear={deselectAll}
+        onSuccess={handleRefresh}
+        members={members}
+      />
 
       <IssueDetailPanel
         issue={

@@ -1,6 +1,6 @@
 "use client";
 
-import { Bug, BookOpen, Zap, CheckSquare } from "lucide-react";
+import { Bug, BookOpen, Zap, CheckSquare, ListTodo } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -11,9 +11,11 @@ interface IssueCardProps {
   issue: Issue & {
     assignee: Pick<User, "id" | "name" | "email" | "image"> | null;
     labels: { label: { id: string; name: string; color: string } }[];
+    _count?: { subtasks: number };
   };
-  onClick?: () => void;
+  onClick?: (e: React.MouseEvent) => void;
   isDragging?: boolean;
+  isSelected?: boolean;
 }
 
 const typeIcons: Record<IssueType, React.ElementType> = {
@@ -38,14 +40,15 @@ const priorityColors: Record<IssuePriority, string> = {
   NONE: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400",
 };
 
-export function IssueCard({ issue, onClick, isDragging }: IssueCardProps) {
+export function IssueCard({ issue, onClick, isDragging, isSelected }: IssueCardProps) {
   const TypeIcon = typeIcons[issue.type];
 
   return (
     <Card
       className={cn(
         "cursor-pointer hover:border-slate-400 dark:hover:border-slate-600 transition-colors",
-        isDragging && "opacity-50 shadow-lg"
+        isDragging && "opacity-50 shadow-lg",
+        isSelected && "ring-2 ring-blue-500 border-blue-500"
       )}
       onClick={onClick}
     >
@@ -56,9 +59,17 @@ export function IssueCard({ issue, onClick, isDragging }: IssueCardProps) {
         </div>
 
         <div className="flex items-center justify-between">
-          <span className="text-xs text-muted-foreground font-mono">
-            {issue.key}
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground font-mono">
+              {issue.key}
+            </span>
+            {issue._count && issue._count.subtasks > 0 && (
+              <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                <ListTodo className="h-3 w-3" />
+                {issue._count.subtasks}
+              </span>
+            )}
+          </div>
           <div className="flex items-center gap-2">
             <Badge variant="secondary" className={cn("text-xs", priorityColors[issue.priority])}>
               {issue.priority.toLowerCase()}
