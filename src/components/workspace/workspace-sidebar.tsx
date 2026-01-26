@@ -1,7 +1,9 @@
 "use client";
 
+import * as React from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useTransition } from "react";
 import { cn } from "@/lib/utils";
 import {
   Home,
@@ -9,6 +11,7 @@ import {
   FolderKanban,
   Plus,
   ChevronRight,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -22,6 +25,24 @@ interface WorkspaceSidebarProps {
 
 export function WorkspaceSidebar({ workspace }: WorkspaceSidebarProps) {
   const pathname = usePathname();
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [loadingProjectKey, setLoadingProjectKey] = React.useState<string | null>(null);
+
+  const handleProjectClick = (e: React.MouseEvent, projectKey: string, href: string) => {
+    e.preventDefault();
+    setLoadingProjectKey(projectKey);
+    startTransition(() => {
+      router.push(href);
+    });
+  };
+
+  // Reset loading state when navigation completes
+  React.useEffect(() => {
+    if (!isPending) {
+      setLoadingProjectKey(null);
+    }
+  }, [isPending]);
 
   const navItems = [
     {
@@ -73,22 +94,34 @@ export function WorkspaceSidebar({ workspace }: WorkspaceSidebarProps) {
             </CreateProjectDialog>
           </div>
           <nav className="space-y-1">
-            {workspace.projects.map((project) => (
-              <Link
-                key={project.id}
-                href={`/workspace/${workspace.slug}/project/${project.key}`}
-                className={cn(
-                  "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                  pathname.includes(`/project/${project.key}`)
-                    ? "bg-slate-200 text-slate-900 dark:bg-slate-800 dark:text-slate-50"
-                    : "text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
-                )}
-              >
-                <FolderKanban className="h-4 w-4" />
-                <span className="truncate">{project.name}</span>
-                <ChevronRight className="ml-auto h-4 w-4 opacity-50" />
-              </Link>
-            ))}
+            {workspace.projects.map((project) => {
+              const href = `/workspace/${workspace.slug}/project/${project.key}`;
+              const isLoading = loadingProjectKey === project.key && isPending;
+              const isActive = pathname.includes(`/project/${project.key}`);
+
+              return (
+                <Link
+                  key={project.id}
+                  href={href}
+                  onClick={(e) => handleProjectClick(e, project.key, href)}
+                  className={cn(
+                    "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                    isActive
+                      ? "bg-slate-200 text-slate-900 dark:bg-slate-800 dark:text-slate-50"
+                      : "text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800",
+                    isLoading && "opacity-70"
+                  )}
+                >
+                  <FolderKanban className="h-4 w-4" />
+                  <span className="truncate">{project.name}</span>
+                  {isLoading ? (
+                    <Loader2 className="ml-auto h-4 w-4 animate-spin" />
+                  ) : (
+                    <ChevronRight className="ml-auto h-4 w-4 opacity-50" />
+                  )}
+                </Link>
+              );
+            })}
             {workspace.projects.length === 0 && (
               <p className="px-3 py-2 text-sm text-slate-500 dark:text-slate-400">
                 No projects yet
