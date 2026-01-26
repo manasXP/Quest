@@ -5,10 +5,15 @@ import type {
   Project,
   Issue,
   Label,
+  Comment,
+  Activity,
+  Invitation,
   WorkspaceRole,
   IssueType,
   IssueStatus,
   IssuePriority,
+  InvitationStatus,
+  ActivityAction,
 } from "@prisma/client";
 
 // Re-export Prisma types
@@ -19,10 +24,15 @@ export type {
   Project,
   Issue,
   Label,
+  Comment,
+  Activity,
+  Invitation,
   WorkspaceRole,
   IssueType,
   IssueStatus,
   IssuePriority,
+  InvitationStatus,
+  ActivityAction,
 };
 
 // Extended types with relations
@@ -92,4 +102,20 @@ export type SessionUser = {
   name: string | null;
   email: string;
   image: string | null;
+};
+
+// Comment types
+export type CommentWithAuthor = Comment & {
+  author: Pick<User, "id" | "name" | "email" | "image">;
+};
+
+// Activity types
+export type ActivityWithActor = Activity & {
+  actor: Pick<User, "id" | "name" | "email" | "image">;
+};
+
+// Invitation types
+export type InvitationWithDetails = Invitation & {
+  workspace: Pick<Workspace, "id" | "name" | "slug">;
+  invitedBy: Pick<User, "id" | "name" | "email" | "image">;
 };

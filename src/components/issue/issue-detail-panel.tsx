@@ -21,6 +21,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { CommentList } from "@/components/comment/comment-list";
+import { ActivityFeed } from "@/components/activity/activity-feed";
 import { updateIssue, deleteIssue } from "@/server/actions/issue";
 import type { Issue, User, IssueType, IssueStatus, IssuePriority } from "@prisma/client";
 
@@ -33,6 +36,7 @@ interface IssueDetailPanelProps {
       })
     | null;
   members: Pick<User, "id" | "name" | "email" | "image">[];
+  currentUserId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onUpdate?: () => void;
@@ -79,6 +83,7 @@ const types: { value: IssueType; label: string }[] = [
 export function IssueDetailPanel({
   issue,
   members,
+  currentUserId,
   open,
   onOpenChange,
   onUpdate,
@@ -233,10 +238,25 @@ export function IssueDetailPanel({
               onChange={(e) => setDescription(e.target.value)}
               onBlur={handleDescriptionBlur}
               placeholder="Add a description..."
-              rows={6}
+              rows={4}
               disabled={isPending}
             />
           </div>
+
+          <Separator />
+
+          <Tabs defaultValue="comments" className="w-full">
+            <TabsList variant="line" className="w-full justify-start">
+              <TabsTrigger value="comments">Comments</TabsTrigger>
+              <TabsTrigger value="activity">Activity</TabsTrigger>
+            </TabsList>
+            <TabsContent value="comments" className="mt-4">
+              <CommentList issueId={issue.id} currentUserId={currentUserId} />
+            </TabsContent>
+            <TabsContent value="activity" className="mt-4">
+              <ActivityFeed issueId={issue.id} />
+            </TabsContent>
+          </Tabs>
 
           <Separator />
 

@@ -1,20 +1,37 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
+import { auth } from "@/lib/auth";
 import { getWorkspaceBySlug } from "@/server/queries/workspace";
+import { getPendingInvitations } from "@/server/queries/invitation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
+import { InviteMemberDialog } from "@/components/workspace/invite-member-dialog";
+import { PendingInvitations } from "@/components/workspace/pending-invitations";
+import { MembersList } from "@/components/workspace/members-list";
 
 export default async function WorkspaceSettingsPage({
   params,
 }: {
   params: Promise<{ workspaceSlug: string }>;
 }) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    redirect("/login");
+  }
+
   const { workspaceSlug } = await params;
   const workspace = await getWorkspaceBySlug(workspaceSlug);
 
   if (!workspace) {
     notFound();
   }
+
+  const pendingInvitations = await getPendingInvitations(workspace.id);
+
+  const isOwner = workspace.ownerId === session.user.id;
+  const isAdmin = workspace.members.some(
+    (m: { userId: string; role: string }) =>
+      m.userId === session.user.id && m.role === "ADMIN"
+  );
+  const isOwnerOrAdmin = isOwner || isAdmin;
 
   return (
     <div className="p-6 max-w-4xl">
@@ -48,58 +65,28 @@ export default async function WorkspaceSettingsPage({
         </Card>
 
         <Card>
-          <CardHeader>
-            <CardTitle>Members</CardTitle>
-            <CardDescription>
-              People who have access to this workspace
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Avatar className="h-9 w-9">
-                    <AvatarImage src={workspace.owner.image || undefined} />
-                    <AvatarFallback>
-                      {workspace.owner.name?.charAt(0).toUpperCase() || "?"}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="text-sm font-medium">
-                      {workspace.owner.name || "Unknown"}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {workspace.owner.email}
-                    </p>
-                  </div>
-                </div>
-                <Badge variant="secondary">Owner</Badge>
-              </div>
-
-              {workspace.members
-                .filter((m: { userId: string }) => m.userId !== workspace.ownerId)
-                .map((member: { id: string; role: string; user: { name: string | null; email: string; image: string | null } }) => (
-                  <div key={member.id} className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-9 w-9">
-                        <AvatarImage src={member.user.image || undefined} />
-                        <AvatarFallback>
-                          {member.user.name?.charAt(0).toUpperCase() || "?"}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <p className="text-sm font-medium">
-                          {member.user.name || "Unknown"}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {member.user.email}
-                        </p>
-                      </div>
-                    </div>
-                    <Badge variant="outline">{member.role}</Badge>
-                  </div>
-                ))}
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle>Members</CardTitle>
+              <CardDescription>
+                People who have access to this workspace
+              </CardDescription>
             </div>
+            {isOwnerOrAdmin && (
+              <InviteMemberDialog workspaceId={workspace.id} />
+            )}
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {isOwnerOrAdmin && pendingInvitations.length > 0 && (
+              <PendingInvitations invitations={pendingInvitations} />
+            )}
+
+            <MembersList
+              members={workspace.members}
+              owner={workspace.owner}
+              currentUserId={session.user.id}
+              isOwnerOrAdmin={isOwnerOrAdmin}
+            />
           </CardContent>
         </Card>
       </div>

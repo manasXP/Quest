@@ -23,7 +23,12 @@
       "Bash(gh repo create:*)",
       "Bash(npx vercel:*)",
       "Bash(npm ls:*)",
-      "Bash(git push)"
+      "Bash(git push)",
+      "Bash(ls:*)",
+      "Bash(cat:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npm test:*)",
+      "Bash(npm run test:coverage:*)"
     ]
   }
 }

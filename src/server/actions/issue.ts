@@ -8,6 +8,7 @@ import {
   updateIssueSchema,
   moveIssueSchema,
 } from "@/lib/validations/issue";
+import { logActivity } from "./activity";
 import type { IssueStatus } from "@prisma/client";
 
 async function getNextIssueNumber(projectId: string): Promise<number> {
@@ -114,6 +115,13 @@ export async function createIssue(data: {
       },
     });
 
+    // Log activity
+    await logActivity({
+      action: "ISSUE_CREATED",
+      issueId: issue.id,
+      actorId: session.user.id,
+    });
+
     revalidatePath(`/workspace/${project.workspace.slug}/project/${project.key}`);
     return { data: issue };
   } catch (error) {
@@ -199,6 +207,60 @@ export async function updateIssue(
       },
     });
 
+    // Log activities for specific changes
+    if (validated.data.status && validated.data.status !== issue.status) {
+      await logActivity({
+        action: "ISSUE_STATUS_CHANGED",
+        issueId: issue.id,
+        actorId: session.user.id,
+        metadata: {
+          field: "status",
+          oldValue: issue.status,
+          newValue: validated.data.status,
+        },
+      });
+    }
+
+    if (validated.data.assigneeId !== undefined && validated.data.assigneeId !== issue.assigneeId) {
+      await logActivity({
+        action: "ISSUE_ASSIGNED",
+        issueId: issue.id,
+        actorId: session.user.id,
+        metadata: {
+          field: "assignee",
+          oldValue: issue.assigneeId,
+          newValue: validated.data.assigneeId,
+        },
+      });
+    }
+
+    if (validated.data.priority && validated.data.priority !== issue.priority) {
+      await logActivity({
+        action: "ISSUE_PRIORITY_CHANGED",
+        issueId: issue.id,
+        actorId: session.user.id,
+        metadata: {
+          field: "priority",
+          oldValue: issue.priority,
+          newValue: validated.data.priority,
+        },
+      });
+    }
+
+    // Log general update for other fields
+    const hasOtherChanges =
+      (validated.data.title && validated.data.title !== issue.title) ||
+      (validated.data.description !== undefined && validated.data.description !== issue.description) ||
+      (validated.data.type && validated.data.type !== issue.type);
+
+    if (hasOtherChanges) {
+      await logActivity({
+        action: "ISSUE_UPDATED",
+        issueId: issue.id,
+        actorId: session.user.id,
+      });
+    }
+
     revalidatePath(
       `/workspace/${issue.project.workspace.slug}/project/${issue.project.key}`
     );
@@ -261,6 +323,20 @@ export async function moveIssue(data: {
         order: validated.data.order,
       },
     });
+
+    // Log status change if status actually changed
+    if (validated.data.status !== issue.status) {
+      await logActivity({
+        action: "ISSUE_STATUS_CHANGED",
+        issueId: issue.id,
+        actorId: session.user.id,
+        metadata: {
+          field: "status",
+          oldValue: issue.status,
+          newValue: validated.data.status,
+        },
+      });
+    }
 
     revalidatePath(
       `/workspace/${issue.project.workspace.slug}/project/${issue.project.key}`

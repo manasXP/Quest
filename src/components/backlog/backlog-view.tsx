@@ -15,6 +15,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { IssueDetailPanel } from "@/components/issue/issue-detail-panel";
+import { IssueFilters } from "@/components/filters/issue-filters";
+import { useIssueFilters } from "@/hooks/use-issue-filters";
 import type { Issue, User, IssueType, IssuePriority, IssueStatus } from "@prisma/client";
 
 type IssueWithRelations = Issue & {
@@ -27,6 +29,7 @@ type IssueWithRelations = Issue & {
 interface BacklogViewProps {
   issues: IssueWithRelations[];
   members: Pick<User, "id" | "name" | "email" | "image">[];
+  currentUserId: string;
 }
 
 const typeIcons: Record<IssueType, React.ElementType> = {
@@ -60,10 +63,21 @@ const statusLabels: Record<IssueStatus, string> = {
   CANCELLED: "Cancelled",
 };
 
-export function BacklogView({ issues, members }: BacklogViewProps) {
+export function BacklogView({ issues, members, currentUserId }: BacklogViewProps) {
   const router = useRouter();
   const [selectedIssue, setSelectedIssue] = useState<IssueWithRelations | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
+
+  const {
+    filters,
+    filteredIssues,
+    updateFilter,
+    clearFilters,
+    hasActiveFilters,
+  } = useIssueFilters({
+    issues,
+    getIssue: (issue) => issue,
+  });
 
   const handleRowClick = (issue: IssueWithRelations) => {
     setSelectedIssue(issue);
@@ -90,6 +104,16 @@ export function BacklogView({ issues, members }: BacklogViewProps) {
 
   return (
     <>
+      <div className="mb-4">
+        <IssueFilters
+          filters={filters}
+          onFilterChange={updateFilter}
+          onClearFilters={clearFilters}
+          hasActiveFilters={hasActiveFilters}
+          members={members}
+        />
+      </div>
+
       <div className="border rounded-lg">
         <Table>
           <TableHeader>
@@ -103,7 +127,7 @@ export function BacklogView({ issues, members }: BacklogViewProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {issues.map((issue) => {
+            {filteredIssues.map((issue) => {
               const TypeIcon = typeIcons[issue.type];
               return (
                 <TableRow
@@ -162,6 +186,7 @@ export function BacklogView({ issues, members }: BacklogViewProps) {
       <IssueDetailPanel
         issue={selectedIssue}
         members={members}
+        currentUserId={currentUserId}
         open={detailOpen}
         onOpenChange={setDetailOpen}
         onUpdate={handleRefresh}

@@ -14,6 +14,8 @@ import { BoardColumn } from "@/components/board/board-column";
 import { IssueCard } from "@/components/issue/issue-card";
 import { IssueDetailPanel } from "@/components/issue/issue-detail-panel";
 import { CreateIssueDialog } from "@/components/issue/create-issue-dialog";
+import { IssueFilters } from "@/components/filters/issue-filters";
+import { useIssueFilters } from "@/hooks/use-issue-filters";
 import { moveIssue } from "@/server/actions/issue";
 import type { Issue, Project, User, IssueStatus } from "@prisma/client";
 
@@ -27,6 +29,7 @@ interface BoardViewProps {
   project: Project;
   issues: IssueWithRelations[];
   members: Pick<User, "id" | "name" | "email" | "image">[];
+  currentUserId: string;
 }
 
 const columns: { id: IssueStatus; title: string }[] = [
@@ -41,19 +44,31 @@ export function BoardView({
   project,
   issues: initialIssues,
   members,
+  currentUserId,
 }: BoardViewProps) {
   const router = useRouter();
   const [issues, setIssues] = useState(initialIssues);
   const [selectedIssue, setSelectedIssue] = useState<IssueWithRelations | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
 
+  const {
+    filters,
+    filteredIssues,
+    updateFilter,
+    clearFilters,
+    hasActiveFilters,
+  } = useIssueFilters({
+    issues,
+    getIssue: (issue) => issue,
+  });
+
   const getIssuesByStatus = useCallback(
     (status: IssueStatus) => {
-      return issues
+      return filteredIssues
         .filter((issue) => issue.status === status)
         .sort((a, b) => a.order - b.order);
     },
-    [issues]
+    [filteredIssues]
   );
 
   const handleDragEnd = async (result: DropResult) => {
@@ -120,16 +135,25 @@ export function BoardView({
           <h1 className="text-xl font-semibold">{project.name}</h1>
           <p className="text-sm text-muted-foreground">Board</p>
         </div>
-        <CreateIssueDialog
-          projectId={project.id}
-          members={members}
-          onSuccess={handleRefresh}
-        >
-          <Button>
-            <Plus className="mr-2 h-4 w-4" />
-            Create Issue
-          </Button>
-        </CreateIssueDialog>
+        <div className="flex items-center gap-3">
+          <IssueFilters
+            filters={filters}
+            onFilterChange={updateFilter}
+            onClearFilters={clearFilters}
+            hasActiveFilters={hasActiveFilters}
+            members={members}
+          />
+          <CreateIssueDialog
+            projectId={project.id}
+            members={members}
+            onSuccess={handleRefresh}
+          >
+            <Button>
+              <Plus className="mr-2 h-4 w-4" />
+              Create Issue
+            </Button>
+          </CreateIssueDialog>
+        </div>
       </div>
 
       <DragDropContext onDragEnd={handleDragEnd}>
@@ -199,6 +223,7 @@ export function BoardView({
             : null
         }
         members={members}
+        currentUserId={currentUserId}
         open={detailOpen}
         onOpenChange={setDetailOpen}
         onUpdate={handleRefresh}

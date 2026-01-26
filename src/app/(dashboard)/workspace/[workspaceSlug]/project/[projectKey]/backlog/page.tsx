@@ -1,5 +1,6 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { Plus } from "lucide-react";
+import { auth } from "@/lib/auth";
 import { getProjectByKey } from "@/server/queries/project";
 import { getBacklogIssues } from "@/server/queries/issue";
 import { getWorkspaceBySlug } from "@/server/queries/workspace";
@@ -12,6 +13,11 @@ export default async function ProjectBacklogPage({
 }: {
   params: Promise<{ workspaceSlug: string; projectKey: string }>;
 }) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    redirect("/login");
+  }
+
   const { workspaceSlug, projectKey } = await params;
 
   const workspace = await getWorkspaceBySlug(workspaceSlug);
@@ -47,6 +53,7 @@ export default async function ProjectBacklogPage({
       <BacklogView
         issues={issues}
         members={members}
+        currentUserId={session.user.id}
       />
     </div>
   );

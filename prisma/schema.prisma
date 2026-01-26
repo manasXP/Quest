@@ -31,6 +31,9 @@ model User {
   ledProjects       Project[]         @relation("ProjectLead")
   assignedIssues    Issue[]           @relation("IssueAssignee")
   reportedIssues    Issue[]           @relation("IssueReporter")
+  comments          Comment[]         @relation("CommentAuthor")
+  activities        Activity[]        @relation("ActivityActor")
+  sentInvitations   Invitation[]      @relation("InvitationSender")
 
   @@map("users")
 }
@@ -89,9 +92,10 @@ model Workspace {
   updatedAt DateTime @updatedAt
 
   // Relations
-  owner    User              @relation("WorkspaceOwner", fields: [ownerId], references: [id], onDelete: Cascade)
-  members  WorkspaceMember[]
-  projects Project[]
+  owner       User              @relation("WorkspaceOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  members     WorkspaceMember[]
+  projects    Project[]
+  invitations Invitation[]
 
   @@map("workspaces")
 }
@@ -165,12 +169,14 @@ model Issue {
   updatedAt   DateTime      @updatedAt
 
   // Relations
-  project  Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  assignee User?        @relation("IssueAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
-  reporter User         @relation("IssueReporter", fields: [reporterId], references: [id], onDelete: Cascade)
-  parent   Issue?       @relation("IssueSubtasks", fields: [parentId], references: [id], onDelete: SetNull)
-  subtasks Issue[]      @relation("IssueSubtasks")
-  labels   IssueLabel[]
+  project    Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  assignee   User?        @relation("IssueAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  reporter   User         @relation("IssueReporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  parent     Issue?       @relation("IssueSubtasks", fields: [parentId], references: [id], onDelete: SetNull)
+  subtasks   Issue[]      @relation("IssueSubtasks")
+  labels     IssueLabel[]
+  comments   Comment[]
+  activities Activity[]
 
   @@unique([projectId, key])
   @@index([projectId, status])
@@ -201,6 +207,25 @@ enum IssuePriority {
   MEDIUM
   LOW
   NONE
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  EXPIRED
+}
+
+enum ActivityAction {
+  ISSUE_CREATED
+  ISSUE_UPDATED
+  ISSUE_DELETED
+  ISSUE_STATUS_CHANGED
+  ISSUE_ASSIGNED
+  ISSUE_PRIORITY_CHANGED
+  COMMENT_ADDED
+  COMMENT_UPDATED
+  COMMENT_DELETED
 }
 
 // ============================================
@@ -234,4 +259,68 @@ model IssueLabel {
 
   @@id([issueId, labelId])
   @@map("issue_labels")
+}
+
+// ============================================
+// Comment Model
+// ============================================
+
+model Comment {
+  id        String   @id @default(cuid())
+  content   String   @db.Text
+  issueId   String
+  authorId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  issue  Issue @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  author User  @relation("CommentAuthor", fields: [authorId], references: [id])
+
+  @@index([issueId])
+  @@map("comments")
+}
+
+// ============================================
+// Activity Model
+// ============================================
+
+model Activity {
+  id        String         @id @default(cuid())
+  action    ActivityAction
+  issueId   String
+  actorId   String
+  metadata  Json?
+  createdAt DateTime       @default(now())
+
+  // Relations
+  issue Issue @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  actor User  @relation("ActivityActor", fields: [actorId], references: [id])
+
+  @@index([issueId])
+  @@map("activities")
+}
+
+// ============================================
+// Invitation Model
+// ============================================
+
+model Invitation {
+  id          String           @id @default(cuid())
+  email       String
+  role        WorkspaceRole    @default(DEVELOPER)
+  workspaceId String
+  invitedById String
+  token       String           @unique @default(cuid())
+  status      InvitationStatus @default(PENDING)
+  expiresAt   DateTime
+  createdAt   DateTime         @default(now())
+
+  // Relations
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  invitedBy User      @relation("InvitationSender", fields: [invitedById], references: [id])
+
+  @@unique([email, workspaceId])
+  @@index([token])
+  @@map("invitations")
 }
