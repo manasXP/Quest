@@ -136,7 +136,7 @@ export function IssueDetailPanel({
           <SheetTitle className="sr-only">{issue.title}</SheetTitle>
         </SheetHeader>
 
-        <div className="mt-4 space-y-6">
+        <div className="mt-4 space-y-6 px-4 pb-4">
           <Input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
