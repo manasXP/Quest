@@ -77,8 +77,8 @@ export default async function WorkspaceSettingsPage({
               </div>
 
               {workspace.members
-                .filter((m) => m.userId !== workspace.ownerId)
-                .map((member) => (
+                .filter((m: { userId: string }) => m.userId !== workspace.ownerId)
+                .map((member: { id: string; role: string; user: { name: string | null; email: string; image: string | null } }) => (
                   <div key={member.id} className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <Avatar className="h-9 w-9">

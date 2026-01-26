@@ -1,0 +1,29 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pnpm create:*)",
+      "Bash(npm install:*)",
+      "Bash(pnpm --version:*)",
+      "Bash(npx create-next-app@latest:*)",
+      "Bash(npm_config_cache=/tmp/npm-cache npm install @prisma/client next-auth@beta @auth/prisma-adapter zod @hello-pangea/dnd date-fns lucide-react)",
+      "Bash(npm_config_cache=/tmp/npm-cache npm install:*)",
+      "Bash(npm_config_cache=/tmp/npm-cache npx shadcn@latest init:*)",
+      "Bash(npm_config_cache=/tmp/npm-cache npx shadcn@latest add:*)",
+      "Bash(npx prisma:*)",
+      "Bash(npm run build:*)",
+      "Bash(grep:*)",
+      "Bash(npm run lint:*)",
+      "mcp__Neon__list_projects",
+      "mcp__Neon__get_connection_string",
+      "Bash(npm run dev:*)",
+      "Bash(open http://localhost:3000)",
+      "Bash(openssl rand:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(gh repo create:*)",
+      "Bash(npx vercel:*)",
+      "Bash(npm ls:*)",
+      "Bash(git push)"
+    ]
+  }
+}
