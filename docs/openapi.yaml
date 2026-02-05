@@ -12,9 +12,9 @@ info:
     - Development: `http://localhost:3000`
 
     ## Notes for Mobile Developers
-    This API specification documents the full capabilities of Quest. Most endpoints are
-    proposed REST wrappers around Next.js Server Actions. File upload endpoints are
-    already implemented as REST endpoints.
+    This API specification documents the full capabilities of Quest. All endpoints are
+    implemented REST API routes that wrap Next.js Server Actions, making them consumable
+    by iOS, Android, and other platforms via standard HTTP requests.
   version: 1.0.0
   contact:
     name: Quest Development Team
