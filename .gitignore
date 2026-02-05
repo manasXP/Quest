@@ -42,3 +42,16 @@ next-env.d.ts
 
 /src/generated/prisma
 .env*.local
+
+# Capacitor / Native builds
+ios/App/Pods
+ios/App/App.xcworkspace/xcuserdata
+ios/App/App.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist
+ios/.DS_Store
+android/.gradle
+android/app/build
+android/build
+android/local.properties
+android/.idea
+*.keystore
+!debug.keystore

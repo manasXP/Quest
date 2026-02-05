@@ -16,7 +16,16 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { useCallback, useEffect } from "react";
+import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { useCallback, useEffect, useState } from "react";
 
 interface RichTextEditorProps {
   value?: string;
@@ -64,96 +73,141 @@ function EditorToolbar({
   editor: Editor | null;
   disabled?: boolean;
 }) {
-  const setLink = useCallback(() => {
+  const [linkDialogOpen, setLinkDialogOpen] = useState(false);
+  const [linkUrl, setLinkUrl] = useState("");
+
+  const openLinkDialog = useCallback(() => {
+    if (!editor) return;
+    const previousUrl = editor.getAttributes("link").href || "";
+    setLinkUrl(previousUrl);
+    setLinkDialogOpen(true);
+  }, [editor]);
+
+  const handleLinkSubmit = useCallback(() => {
     if (!editor) return;
 
-    const previousUrl = editor.getAttributes("link").href;
-    const url = window.prompt("URL", previousUrl);
-
-    if (url === null) {
-      return;
-    }
-
-    if (url === "") {
+    if (linkUrl === "") {
       editor.chain().focus().extendMarkRange("link").unsetLink().run();
-      return;
+    } else {
+      editor.chain().focus().extendMarkRange("link").setLink({ href: linkUrl }).run();
     }
 
-    editor.chain().focus().extendMarkRange("link").setLink({ href: url }).run();
-  }, [editor]);
+    setLinkDialogOpen(false);
+    setLinkUrl("");
+  }, [editor, linkUrl]);
+
+  const handleLinkCancel = useCallback(() => {
+    setLinkDialogOpen(false);
+    setLinkUrl("");
+  }, []);
 
   if (!editor) {
     return null;
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-0.5 border-b px-2 py-1">
-      <ToolbarButton
-        onClick={() => editor.chain().focus().toggleBold().run()}
-        isActive={editor.isActive("bold")}
-        disabled={disabled}
-        title="Bold (Ctrl+B)"
-      >
-        <Bold className="h-4 w-4" />
-      </ToolbarButton>
-      <ToolbarButton
-        onClick={() => editor.chain().focus().toggleItalic().run()}
-        isActive={editor.isActive("italic")}
-        disabled={disabled}
-        title="Italic (Ctrl+I)"
-      >
-        <Italic className="h-4 w-4" />
-      </ToolbarButton>
-      <ToolbarButton
-        onClick={() => editor.chain().focus().toggleCode().run()}
-        isActive={editor.isActive("code")}
-        disabled={disabled}
-        title="Code"
-      >
-        <Code className="h-4 w-4" />
-      </ToolbarButton>
-      <div className="mx-1 h-6 w-px bg-border" />
-      <ToolbarButton
-        onClick={() => editor.chain().focus().toggleBulletList().run()}
-        isActive={editor.isActive("bulletList")}
-        disabled={disabled}
-        title="Bullet List"
-      >
-        <List className="h-4 w-4" />
-      </ToolbarButton>
-      <ToolbarButton
-        onClick={() => editor.chain().focus().toggleOrderedList().run()}
-        isActive={editor.isActive("orderedList")}
-        disabled={disabled}
-        title="Numbered List"
-      >
-        <ListOrdered className="h-4 w-4" />
-      </ToolbarButton>
-      <div className="mx-1 h-6 w-px bg-border" />
-      <ToolbarButton
-        onClick={setLink}
-        isActive={editor.isActive("link")}
-        disabled={disabled}
-        title="Add Link"
-      >
-        <LinkIcon className="h-4 w-4" />
-      </ToolbarButton>
-      <div className="mx-1 h-6 w-px bg-border" />
-      <ToolbarButton
-        onClick={() => editor.chain().focus().undo().run()}
-        disabled={disabled || !editor.can().undo()}
-        title="Undo"
-      >
-        <Undo className="h-4 w-4" />
-      </ToolbarButton>
-      <ToolbarButton
-        onClick={() => editor.chain().focus().redo().run()}
-        disabled={disabled || !editor.can().redo()}
-        title="Redo"
-      >
-        <Redo className="h-4 w-4" />
-      </ToolbarButton>
-    </div>
+    <>
+      <div className="flex flex-wrap items-center gap-0.5 border-b px-2 py-1">
+        <ToolbarButton
+          onClick={() => editor.chain().focus().toggleBold().run()}
+          isActive={editor.isActive("bold")}
+          disabled={disabled}
+          title="Bold (Ctrl+B)"
+        >
+          <Bold className="h-4 w-4" />
+        </ToolbarButton>
+        <ToolbarButton
+          onClick={() => editor.chain().focus().toggleItalic().run()}
+          isActive={editor.isActive("italic")}
+          disabled={disabled}
+          title="Italic (Ctrl+I)"
+        >
+          <Italic className="h-4 w-4" />
+        </ToolbarButton>
+        <ToolbarButton
+          onClick={() => editor.chain().focus().toggleCode().run()}
+          isActive={editor.isActive("code")}
+          disabled={disabled}
+          title="Code"
+        >
+          <Code className="h-4 w-4" />
+        </ToolbarButton>
+        <div className="mx-1 h-6 w-px bg-border" />
+        <ToolbarButton
+          onClick={() => editor.chain().focus().toggleBulletList().run()}
+          isActive={editor.isActive("bulletList")}
+          disabled={disabled}
+          title="Bullet List"
+        >
+          <List className="h-4 w-4" />
+        </ToolbarButton>
+        <ToolbarButton
+          onClick={() => editor.chain().focus().toggleOrderedList().run()}
+          isActive={editor.isActive("orderedList")}
+          disabled={disabled}
+          title="Numbered List"
+        >
+          <ListOrdered className="h-4 w-4" />
+        </ToolbarButton>
+        <div className="mx-1 h-6 w-px bg-border" />
+        <ToolbarButton
+          onClick={openLinkDialog}
+          isActive={editor.isActive("link")}
+          disabled={disabled}
+          title="Add Link"
+        >
+          <LinkIcon className="h-4 w-4" />
+        </ToolbarButton>
+        <div className="mx-1 h-6 w-px bg-border" />
+        <ToolbarButton
+          onClick={() => editor.chain().focus().undo().run()}
+          disabled={disabled || !editor.can().undo()}
+          title="Undo"
+        >
+          <Undo className="h-4 w-4" />
+        </ToolbarButton>
+        <ToolbarButton
+          onClick={() => editor.chain().focus().redo().run()}
+          disabled={disabled || !editor.can().redo()}
+          title="Redo"
+        >
+          <Redo className="h-4 w-4" />
+        </ToolbarButton>
+      </div>
+
+      <Dialog open={linkDialogOpen} onOpenChange={setLinkDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add Link</DialogTitle>
+            <DialogDescription>
+              Enter the URL for the link. Leave empty to remove.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Input
+              value={linkUrl}
+              onChange={(e) => setLinkUrl(e.target.value)}
+              placeholder="https://example.com"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  handleLinkSubmit();
+                }
+              }}
+              autoFocus
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={handleLinkCancel}>
+              Cancel
+            </Button>
+            <Button onClick={handleLinkSubmit}>
+              {linkUrl ? "Apply" : "Remove Link"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 
