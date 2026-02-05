@@ -36,6 +36,11 @@ export default async function ProjectBacklogPage({
     getProjectSprints(project.id),
   ]);
   const members = workspace.members.map((m: { user: { id: string; name: string | null; email: string; image: string | null } }) => m.user);
+  const projects = workspace.projects.map((p: { id: string; name: string; key: string }) => ({
+    id: p.id,
+    name: p.name,
+    key: p.key,
+  }));
 
   return (
     <div className="p-6">
@@ -48,6 +53,9 @@ export default async function ProjectBacklogPage({
         </div>
         <CreateIssueDialog
           projectId={project.id}
+          projectName={project.name}
+          projectKey={project.key}
+          projects={projects}
           members={members}
           labels={project.labels}
           sprints={sprints}

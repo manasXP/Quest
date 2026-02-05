@@ -35,9 +35,16 @@ export default async function ProjectBoardPage({
 
   const members = workspace.members.map((m: { user: { id: string; name: string | null; email: string; image: string | null } }) => m.user);
 
+  const projects = workspace.projects.map((p: { id: string; name: string; key: string }) => ({
+    id: p.id,
+    name: p.name,
+    key: p.key,
+  }));
+
   return (
     <BoardView
       project={project}
+      projects={projects}
       issues={issues}
       members={members}
       sprints={sprints}

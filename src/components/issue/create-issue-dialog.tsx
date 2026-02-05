@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition, useRef } from "react";
-import { X, Paperclip, Flag, ChevronDown, ChevronUp } from "lucide-react";
+import { X, Paperclip, Flag, ChevronDown, ChevronUp, CheckSquare, Bug, BookOpen, Zap, FolderKanban, Minus, Maximize2, Minimize2, MoreHorizontal, Settings, Eye, EyeOff, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,6 +28,14 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Switch } from "@/components/ui/switch";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { DatePicker } from "@/components/ui/date-picker";
 import { LabelSelector } from "@/components/label";
@@ -40,8 +48,17 @@ import { MAX_FILE_SIZE, isAllowedFileType, formatFileSize } from "@/lib/upload";
 import { cn } from "@/lib/utils";
 import type { User, IssueType, IssueStatus, SprintStatus, LinkType } from "@prisma/client";
 
+interface ProjectOption {
+  id: string;
+  name: string;
+  key: string;
+}
+
 interface CreateIssueDialogProps {
   projectId: string;
+  projectName?: string;
+  projectKey?: string;
+  projects?: ProjectOption[];
   members?: Pick<User, "id" | "name" | "email" | "image">[];
   labels?: { id: string; name: string; color: string }[];
   sprints?: { id: string; name: string; status: SprintStatus }[];
@@ -53,18 +70,18 @@ interface CreateIssueDialogProps {
 }
 
 const issueTypes = [
-  { value: "TASK", label: "Task" },
-  { value: "BUG", label: "Bug" },
-  { value: "STORY", label: "Story" },
-  { value: "EPIC", label: "Epic" },
+  { value: "TASK", label: "Task", icon: CheckSquare, color: "text-blue-500" },
+  { value: "BUG", label: "Bug", icon: Bug, color: "text-red-500" },
+  { value: "STORY", label: "Story", icon: BookOpen, color: "text-green-500" },
+  { value: "EPIC", label: "Epic", icon: Zap, color: "text-purple-500" },
 ] as const;
 
 const issueStatuses = [
-  { value: "BACKLOG", label: "Backlog" },
-  { value: "TODO", label: "To Do" },
-  { value: "IN_PROGRESS", label: "In Progress" },
-  { value: "IN_REVIEW", label: "In Review" },
-  { value: "DONE", label: "Done" },
+  { value: "BACKLOG", label: "Backlog", color: "bg-gray-100 text-gray-700" },
+  { value: "TODO", label: "To Do", color: "bg-gray-100 text-gray-700" },
+  { value: "IN_PROGRESS", label: "In Progress", color: "bg-blue-100 text-blue-700" },
+  { value: "IN_REVIEW", label: "In Review", color: "bg-blue-100 text-blue-700" },
+  { value: "DONE", label: "Done", color: "bg-green-100 text-green-700" },
 ] as const;
 
 const priorities = [
@@ -78,6 +95,7 @@ const priorities = [
 const storyPointOptions = [1, 2, 3, 5, 8, 13, 21];
 
 interface FormState {
+  selectedProjectId: string;
   title: string;
   description: string;
   type: IssueType;
@@ -94,7 +112,8 @@ interface FormState {
   links: { type: LinkType; issueId: string }[];
 }
 
-const initialFormState: FormState = {
+const createInitialFormState = (projectId: string): FormState => ({
+  selectedProjectId: projectId,
   title: "",
   description: "",
   type: "TASK",
@@ -109,10 +128,13 @@ const initialFormState: FormState = {
   storyPoints: null,
   flagged: false,
   links: [],
-};
+});
 
 export function CreateIssueDialog({
   projectId,
+  projectName,
+  projectKey,
+  projects = [],
   members = [],
   labels = [],
   sprints = [],
@@ -128,7 +150,17 @@ export function CreateIssueDialog({
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [createAnother, setCreateAnother] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
-  const [form, setForm] = useState<FormState>(initialFormState);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [hideUnusedFields, setHideUnusedFields] = useState(false);
+  const [isMinimized, setIsMinimized] = useState(false);
+  const [form, setForm] = useState<FormState>(() => createInitialFormState(projectId));
+
+  // Build project options - include current project even if not in projects list
+  const projectOptions: ProjectOption[] = projects.length > 0
+    ? projects
+    : projectName && projectKey
+      ? [{ id: projectId, name: projectName, key: projectKey }]
+      : [{ id: projectId, name: "Current Project", key: "" }];
   const fileInputRef = useRef<HTMLInputElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
 
@@ -206,14 +238,15 @@ export function CreateIssueDialog({
     if (keepPersistent) {
       // Keep: project, type, priority, sprint, assignee
       setForm((prev) => ({
-        ...initialFormState,
+        ...createInitialFormState(projectId),
+        selectedProjectId: prev.selectedProjectId,
         type: prev.type,
         priority: prev.priority,
         sprintId: prev.sprintId,
         assigneeId: prev.assigneeId,
       }));
     } else {
-      setForm(initialFormState);
+      setForm(createInitialFormState(projectId));
     }
     setSelectedFiles([]);
     setError(null);
@@ -235,7 +268,7 @@ export function CreateIssueDialog({
         type: form.type,
         status: form.status,
         priority: form.priority,
-        projectId,
+        projectId: form.selectedProjectId,
         assigneeId: form.assigneeId,
         sprintId: form.sprintId,
         parentId: form.parentId,
@@ -312,10 +345,97 @@ export function CreateIssueDialog({
   };
 
   const content = (
-    <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-      <DialogHeader>
-        <DialogTitle>Create issue</DialogTitle>
-        <DialogDescription>Add a new issue to the project.</DialogDescription>
+    <DialogContent className={cn(
+      "max-h-[90vh] overflow-y-auto",
+      isFullscreen ? "sm:max-w-[95vw] h-[95vh]" : "sm:max-w-[57rem]",
+      isMinimized && "hidden"
+    )}>
+      <DialogHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <div>
+          <DialogTitle>Create issue</DialogTitle>
+          <DialogDescription>Required fields are marked with an asterisk *</DialogDescription>
+        </div>
+        <div className="flex items-center gap-1">
+          {/* Minimize */}
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={() => setIsMinimized(true)}
+            title="Minimize"
+          >
+            <Minus className="h-4 w-4" />
+          </Button>
+
+          {/* Fullscreen toggle */}
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={() => setIsFullscreen(!isFullscreen)}
+            title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
+          >
+            {isFullscreen ? (
+              <Minimize2 className="h-4 w-4" />
+            ) : (
+              <Maximize2 className="h-4 w-4" />
+            )}
+          </Button>
+
+          {/* More options dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+              >
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuItem>
+                <Settings className="mr-2 h-4 w-4" />
+                Configure fields
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={(e) => {
+                  e.preventDefault();
+                  setHideUnusedFields(!hideUnusedFields);
+                }}
+              >
+                {hideUnusedFields ? (
+                  <Eye className="mr-2 h-4 w-4" />
+                ) : (
+                  <EyeOff className="mr-2 h-4 w-4" />
+                )}
+                Hide unused fields
+                <Switch
+                  checked={hideUnusedFields}
+                  onCheckedChange={setHideUnusedFields}
+                  className="ml-auto"
+                />
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem>
+                <Eye className="mr-2 h-4 w-4" />
+                Stop watching
+                <span className="ml-auto text-xs text-muted-foreground">W</span>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
+                Watching this issue
+              </div>
+              <DropdownMenuItem>
+                <Plus className="mr-2 h-4 w-4" />
+                Add watchers
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </DialogHeader>
       <form ref={formRef} onSubmit={handleSubmit}>
         <div className="space-y-6 py-4">
@@ -325,64 +445,150 @@ export function CreateIssueDialog({
             </div>
           )}
 
-          {/* Core Section */}
+          {/* Core Section - Jira-style layout */}
           <div className="space-y-4">
+            {/* Space (Project) - Dropdown selector */}
+            <div className="space-y-2">
+              <Label>
+                Space <span className="text-destructive">*</span>
+              </Label>
+              <Select
+                value={form.selectedProjectId}
+                onValueChange={(v) => updateForm("selectedProjectId", v)}
+                disabled={isPending}
+              >
+                <SelectTrigger className="w-[300px]">
+                  <SelectValue>
+                    {(() => {
+                      const selectedProject = projectOptions.find((p) => p.id === form.selectedProjectId);
+                      if (selectedProject) {
+                        return (
+                          <span className="flex items-center gap-2">
+                            <FolderKanban className="h-4 w-4 text-blue-500" />
+                            {selectedProject.name}
+                            {selectedProject.key && ` (${selectedProject.key})`}
+                          </span>
+                        );
+                      }
+                      return "Select a space...";
+                    })()}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {projectOptions.length > 0 && (
+                    <>
+                      <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
+                        Recent Spaces
+                      </div>
+                      {projectOptions.map((project) => (
+                        <SelectItem key={project.id} value={project.id}>
+                          <span className="flex items-center gap-2">
+                            <FolderKanban className="h-4 w-4 text-blue-500" />
+                            {project.name}
+                            {project.key && ` (${project.key})`}
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </>
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Work Type (Issue Type) - with icons */}
+            <div className="space-y-2">
+              <Label htmlFor="type">
+                Work type <span className="text-destructive">*</span>
+              </Label>
+              <Select
+                value={form.type}
+                onValueChange={(v) => updateForm("type", v as IssueType)}
+                disabled={isPending}
+              >
+                <SelectTrigger className="w-[300px]">
+                  <SelectValue>
+                    {(() => {
+                      const selectedType = issueTypes.find((t) => t.value === form.type);
+                      if (selectedType) {
+                        const Icon = selectedType.icon;
+                        return (
+                          <span className="flex items-center gap-2">
+                            <Icon className={cn("h-4 w-4", selectedType.color)} />
+                            {selectedType.label}
+                          </span>
+                        );
+                      }
+                      return null;
+                    })()}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {issueTypes.map((type) => {
+                    const Icon = type.icon;
+                    return (
+                      <SelectItem key={type.value} value={type.value}>
+                        <span className="flex items-center gap-2">
+                          <Icon className={cn("h-4 w-4", type.color)} />
+                          {type.label}
+                        </span>
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Status */}
+            <div className="space-y-2 max-w-[200px]">
+              <Label htmlFor="status">Status</Label>
+              <Select
+                value={form.status}
+                onValueChange={(v) => updateForm("status", v as IssueStatus)}
+                disabled={isPending}
+              >
+                <SelectTrigger>
+                  <SelectValue>
+                    {(() => {
+                      const selectedStatus = issueStatuses.find((s) => s.value === form.status);
+                      if (selectedStatus) {
+                        return (
+                          <span className={cn("px-2 py-0.5 rounded text-xs font-medium", selectedStatus.color)}>
+                            {selectedStatus.label}
+                          </span>
+                        );
+                      }
+                      return null;
+                    })()}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {issueStatuses.map((status) => (
+                    <SelectItem key={status.value} value={status.value}>
+                      <span className={cn("px-2 py-0.5 rounded text-xs font-medium", status.color)}>
+                        {status.label}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Summary (Title) */}
             <div className="space-y-2">
               <Label htmlFor="title">
-                Title <span className="text-destructive">*</span>
+                Summary <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="title"
                 value={form.title}
                 onChange={(e) => updateForm("title", e.target.value)}
-                placeholder="Issue title"
+                placeholder="Enter issue summary"
                 required
                 disabled={isPending}
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="type">Type</Label>
-                <Select
-                  value={form.type}
-                  onValueChange={(v) => updateForm("type", v as IssueType)}
-                  disabled={isPending}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {issueTypes.map((type) => (
-                      <SelectItem key={type.value} value={type.value}>
-                        {type.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="status">Status</Label>
-                <Select
-                  value={form.status}
-                  onValueChange={(v) => updateForm("status", v as IssueStatus)}
-                  disabled={isPending}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {issueStatuses.map((status) => (
-                      <SelectItem key={status.value} value={status.value}>
-                        {status.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
+            {/* Description */}
             <div className="space-y-2">
               <Label htmlFor="description">Description</Label>
               <RichTextEditor
@@ -665,18 +871,56 @@ export function CreateIssueDialog({
     </DialogContent>
   );
 
+  // Minimized bar shown at bottom when dialog is minimized
+  const minimizedBar = isMinimized && isOpen && (
+    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-background border rounded-lg shadow-lg px-4 py-2 flex items-center gap-4">
+      <span className="text-sm font-medium">Create issue</span>
+      {form.title && (
+        <span className="text-sm text-muted-foreground truncate max-w-[200px]">
+          - {form.title}
+        </span>
+      )}
+      <div className="flex items-center gap-1">
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => setIsMinimized(false)}
+          title="Restore"
+        >
+          <Maximize2 className="h-4 w-4" />
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => handleOpenChange(false)}
+          title="Close"
+        >
+          <X className="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
+  );
+
   if (children) {
     return (
-      <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-        <DialogTrigger asChild>{children}</DialogTrigger>
-        {content}
-      </Dialog>
+      <>
+        {minimizedBar}
+        <Dialog open={isOpen && !isMinimized} onOpenChange={handleOpenChange}>
+          <DialogTrigger asChild>{children}</DialogTrigger>
+          {content}
+        </Dialog>
+      </>
     );
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-      {content}
-    </Dialog>
+    <>
+      {minimizedBar}
+      <Dialog open={isOpen && !isMinimized} onOpenChange={handleOpenChange}>
+        {content}
+      </Dialog>
+    </>
   );
 }

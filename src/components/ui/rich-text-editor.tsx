@@ -183,6 +183,7 @@ export function RichTextEditor({
     ],
     content: value,
     editable: !disabled,
+    immediatelyRender: false,
     onUpdate: ({ editor }) => {
       const html = editor.getHTML();
       // Return empty string if editor only contains empty paragraph

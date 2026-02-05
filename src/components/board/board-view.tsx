@@ -31,6 +31,7 @@ interface BoardViewProps {
   project: Project & {
     labels: { id: string; name: string; color: string }[];
   };
+  projects: { id: string; name: string; key: string }[];
   issues: IssueWithRelations[];
   members: Pick<User, "id" | "name" | "email" | "image">[];
   sprints: { id: string; name: string; status: SprintStatus }[];
@@ -47,6 +48,7 @@ const columns: { id: IssueStatus; title: string }[] = [
 
 export function BoardView({
   project,
+  projects,
   issues: initialIssues,
   members,
   sprints,
@@ -173,6 +175,9 @@ export function BoardView({
           />
           <CreateIssueDialog
             projectId={project.id}
+            projectName={project.name}
+            projectKey={project.key}
+            projects={projects}
             members={members}
             labels={project.labels}
             sprints={sprints}
