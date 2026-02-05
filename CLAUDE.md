@@ -67,6 +67,7 @@ quest/
 
 ## Deployment
 
+- **Production URL:** https://quest-manas-pradhans-projects.vercel.app
 - **Hosting:** Vercel (connected via GitHub)
 - **Auto-deploy:** Pushing to `main` triggers automatic production deployment
 - **Preview deployments:** Pull requests get automatic preview URLs
