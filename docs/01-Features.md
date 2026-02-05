@@ -18,10 +18,40 @@
 - Priority levels: Urgent, High, Medium, Low, None
 - Status workflow: Backlog → Todo → In Progress → In Review → Done
 - Assignee and reporter
-- Due dates
+- Due dates and start dates
 - Labels/tags
 - Comments and activity feed
 - File attachments
+- Story points for estimation
+- Flagged/impediment indicator
+
+#### Create Issue Dialog
+Full-featured issue creation with:
+- Project and type selection
+- Rich text description (Tiptap editor with formatting, @mentions)
+- Assignment (Assignee, Reporter)
+- Planning fields (Priority, Sprint, Story Points, Labels)
+- Date fields (Start Date, Due Date)
+- File attachments (drag-and-drop)
+- Issue linking (blocks, duplicates, relates to)
+- Flagged checkbox for impediments
+- "Create another" workflow for batch creation
+
+### Sprints
+- Create, edit, delete sprints within a project
+- Sprint properties: name, goal, start date, end date
+- Sprint status: Planned, Active, Completed
+- Assign issues to sprints
+- Only one active sprint per project at a time
+- Sprint backlog view for planning
+
+### Issue Linking
+- Link related issues with relationship types:
+  - **Blocks / Is blocked by**: Dependency relationships
+  - **Relates to**: General relationships
+  - **Duplicates / Is duplicated by**: Duplicate tracking
+- View linked issues on issue detail page
+- Navigate between linked issues
 
 ### Boards
 - Kanban board view
@@ -32,7 +62,8 @@
 ### Backlog
 - List view of all issues
 - Bulk actions
-- Sprint planning (future)
+- Sprint planning
+- Drag issues between sprints
 
 ## Secondary Features
 
@@ -50,7 +81,7 @@
 
 ## Future Enhancements
 
-- Sprints and velocity tracking
+- Velocity tracking and burndown charts
 - Time tracking
 - Custom fields
 - Automations/workflows

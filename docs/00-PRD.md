@@ -92,9 +92,14 @@ Teams need a streamlined way to:
 | Priority | Urgent, High, Medium, Low, None | Yes |
 | Assignee | User | No |
 | Reporter | User | Auto |
+| Start Date | Date | No |
 | Due Date | Date | No |
 | Labels | Multi-select | No |
 | Parent | Issue (for subtasks) | No |
+| Sprint | Sprint | No |
+| Story Points | Integer (0-100) | No |
+| Flagged | Boolean | No |
+| Linked Issues | Multi-select | No |
 
 **Requirements:**
 - Create, edit, delete issues
@@ -110,6 +115,13 @@ Teams need a streamlined way to:
 - [ ] Status changes are logged in activity
 - [ ] Subtasks appear nested under parent
 - [ ] Issues display formatted as KEY-NUMBER (e.g., QUEST-42)
+- [ ] Rich text editor supports formatting, lists, code, and @mentions
+- [ ] User can attach files via drag-and-drop or browse
+- [ ] User can link issues with relationship types
+- [ ] User can assign issue to sprint
+- [ ] User can set story points for estimation
+- [ ] "Create another" keeps dialog open for batch creation
+- [ ] Flagged issues show visual indicator
 
 ---
 
@@ -202,13 +214,28 @@ Teams need a streamlined way to:
 ## User Flows
 
 ### Create Issue Flow
-1. User clicks "Create Issue" button
-2. Modal opens with issue form
-3. User fills required fields (title, type)
-4. User optionally sets assignee, priority, labels
-5. User clicks "Create"
-6. Issue appears in backlog/board
-7. Toast confirms creation
+1. User clicks "Create Issue" button (header, board, or keyboard shortcut)
+2. Modal opens with scrollable issue form
+3. Project and Type pre-selected based on context
+4. User fills required fields:
+   - Summary (required, 1-200 characters)
+   - Reporter auto-filled with current user
+5. User optionally sets additional fields:
+   - Description (rich text with @mentions)
+   - Assignee (with "Assign to me" shortcut)
+   - Priority (defaults to Medium)
+   - Sprint, Story Points, Labels
+   - Start Date, Due Date
+   - File attachments (drag-and-drop)
+   - Linked issues (blocks, relates to, duplicates)
+   - Flagged checkbox
+6. User clicks "Create"
+7. Issue created and appears in backlog/board
+8. Toast confirms creation with issue key link
+9. If "Create another" checked:
+   - Form stays open with some fields retained
+   - Summary, Description, Attachments cleared
+   - User can immediately create next issue
 
 ### Board Workflow
 1. User opens project board
@@ -290,8 +317,13 @@ Teams need a streamlined way to:
 - [ ] Saved filters
 - [ ] Bulk actions
 
+### v0.4
+- [ ] Sprint management (create, edit, start, complete)
+- [ ] Sprint backlog and planning view
+- [ ] Issue linking
+- [ ] Story points and velocity tracking
+
 ### Future
-- Sprints and velocity
 - Time tracking
 - Custom fields
 - Automations
