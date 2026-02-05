@@ -3,7 +3,7 @@ import { cancelInvitation } from "@/server/actions/invitation";
 
 type RouteParams = { params: Promise<{ invitationId: string }> };
 
-// DELETE /api/invitations/[invitationId]/cancel - Cancel an invitation
+// DELETE /api/invitations/[invitationId] - Cancel an invitation
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
     const { invitationId } = await params;
