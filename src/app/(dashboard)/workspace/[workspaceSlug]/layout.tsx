@@ -18,8 +18,8 @@ export default async function WorkspaceLayout({
 
   return (
     <div className="flex h-[calc(100vh-3.5rem)]">
-      {/* Mobile hamburger menu - fixed position in top left */}
-      <div className="fixed top-[0.625rem] left-2 z-50 md:hidden">
+      {/* Mobile hamburger menu - positioned in header area */}
+      <div className="fixed top-0 left-0 h-14 flex items-center px-4 z-50 md:hidden">
         <MobileSidebarTrigger workspace={workspace} />
       </div>
       <WorkspaceSidebar workspace={workspace} />

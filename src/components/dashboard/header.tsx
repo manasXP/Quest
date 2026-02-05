@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
-import { LogOut, Settings } from "lucide-react";
+import { LogOut, Settings, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -26,15 +27,29 @@ export function DashboardHeader({
   user,
   workspaces,
 }: DashboardHeaderProps) {
-  return (
-    <header className="border-b bg-white dark:bg-slate-950 sticky top-0 z-40">
-      <div className="flex h-14 items-center gap-2 px-4">
-        {/* Spacer for mobile hamburger menu (rendered in workspace layout) */}
-        <div className="w-9 md:hidden" />
+  const pathname = usePathname();
 
-        <Link href="/workspace" className="font-bold text-xl">
-          Quest
-        </Link>
+  // Check if we're in a workspace route (has /workspace/[slug])
+  const workspaceMatch = pathname.match(/^\/workspace\/([^\/]+)/);
+  const isInWorkspace = !!workspaceMatch;
+
+  return (
+    <header className="border-b bg-white dark:bg-slate-950 sticky top-0 z-50">
+      <div className="flex h-14 items-center gap-2 px-4">
+        {/* Mobile: Show menu button placeholder if in workspace (actual trigger rendered by workspace layout) */}
+        {isInWorkspace ? (
+          <>
+            {/* This is a placeholder - the actual button is rendered by MobileSidebarTrigger in workspace layout */}
+            <div className="w-9 h-9 md:hidden" id="mobile-menu-slot" />
+            <Link href="/workspace" className="font-bold text-xl hidden md:block">
+              Quest
+            </Link>
+          </>
+        ) : (
+          <Link href="/workspace" className="font-bold text-xl">
+            Quest
+          </Link>
+        )}
 
         <div className="w-48 hidden sm:block">
           <WorkspaceSwitcher workspaces={workspaces} />
