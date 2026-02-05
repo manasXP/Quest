@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useTransition } from "react";
+import { useState, useEffect, useCallback, useTransition } from "react";
 import Link from "next/link";
 import { Bell, CheckCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -37,7 +37,7 @@ export function NotificationDropdown() {
   const [loading, setLoading] = useState(true);
   const [isPending, startTransition] = useTransition();
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     const [notifs, count] = await Promise.all([
       getNotifications(10),
       getUnreadNotificationCount(),
@@ -45,20 +45,22 @@ export function NotificationDropdown() {
     setNotifications(notifs);
     setUnreadCount(count);
     setLoading(false);
-  };
+  }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- async data fetching
     fetchData();
     // Refresh every 30 seconds
     const interval = setInterval(fetchData, 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [fetchData]);
 
   useEffect(() => {
     if (open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- async data fetching
       fetchData();
     }
-  }, [open]);
+  }, [open, fetchData]);
 
   const handleMarkAllRead = () => {
     startTransition(async () => {

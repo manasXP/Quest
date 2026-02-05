@@ -76,8 +76,8 @@ export async function createSavedFilter(data: {
 
     revalidatePath(`/workspace/${project.workspace.slug}/project/${project.key}`);
     return { data: savedFilter };
-  } catch (error: any) {
-    if (error.code === "P2002") {
+  } catch (error) {
+    if (error instanceof Object && "code" in error && error.code === "P2002") {
       return { error: "A filter with this name already exists" };
     }
     console.error("Failed to create saved filter:", error);
@@ -145,8 +145,8 @@ export async function updateSavedFilter(
       `/workspace/${savedFilter.project.workspace.slug}/project/${savedFilter.project.key}`
     );
     return { data: updated };
-  } catch (error: any) {
-    if (error.code === "P2002") {
+  } catch (error) {
+    if (error instanceof Object && "code" in error && error.code === "P2002") {
       return { error: "A filter with this name already exists" };
     }
     console.error("Failed to update saved filter:", error);

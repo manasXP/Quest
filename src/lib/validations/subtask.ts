@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { issueTypeSchema, issuePrioritySchema } from "./issue";
+import { issuePrioritySchema } from "./issue";
 
 // Subtasks can only be TASK or BUG (not EPIC or STORY)
 export const subtaskTypeSchema = z.enum(["TASK", "BUG"]);

@@ -143,9 +143,9 @@ export function BacklogView({ projectId, issues, members, currentUserId }: Backl
               <TableHead className="w-[40px]">
                 <Checkbox
                   checked={isAllSelected}
-                  ref={(el) => {
+                  ref={(el: HTMLButtonElement | null) => {
                     if (el) {
-                      (el as any).indeterminate = isPartiallySelected;
+                      (el as HTMLButtonElement & { indeterminate: boolean }).indeterminate = isPartiallySelected;
                     }
                   }}
                   onCheckedChange={toggleAll}

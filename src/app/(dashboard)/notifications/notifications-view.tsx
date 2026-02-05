@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useTransition } from "react";
-import { Bell, CheckCheck, Trash2 } from "lucide-react";
+import { useState, useEffect, useCallback, useTransition } from "react";
+import { Bell, CheckCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NotificationItem } from "@/components/notifications/notification-item";
 import {
@@ -27,15 +27,16 @@ export function NotificationsView() {
   const [loading, setLoading] = useState(true);
   const [isPending, startTransition] = useTransition();
 
-  const fetchNotifications = async () => {
+  const fetchNotifications = useCallback(async () => {
     const notifs = await getNotifications(100);
     setNotifications(notifs);
     setLoading(false);
-  };
+  }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- async data fetching
     fetchNotifications();
-  }, []);
+  }, [fetchNotifications]);
 
   const handleMarkAllRead = () => {
     startTransition(async () => {

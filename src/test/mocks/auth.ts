@@ -16,16 +16,16 @@ export function mockAuthenticatedUser(user: {
   name?: string;
   image?: string;
 }) {
-  (vi.mocked(auth) as any).mockResolvedValue({
+  vi.mocked(auth).mockResolvedValue({
     user: {
       id: user.id,
       email: user.email ?? `${user.id}@test.com`,
       name: user.name ?? "Test User",
       image: user.image ?? null,
     },
-  } as Session);
+  } as Session as Awaited<ReturnType<typeof auth>>);
 }
 
 export function mockUnauthenticated() {
-  (vi.mocked(auth) as any).mockResolvedValue(null);
+  vi.mocked(auth).mockResolvedValue(null as Awaited<ReturnType<typeof auth>>);
 }

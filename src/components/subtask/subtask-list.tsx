@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { ListTodo } from "lucide-react";
 import { SubtaskItem } from "./subtask-item";
 import { CreateSubtaskForm } from "./create-subtask-form";
@@ -18,15 +18,16 @@ export function SubtaskList({ parentId, parentType }: SubtaskListProps) {
   const [subtasks, setSubtasks] = useState<SubtaskData[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchSubtasks = async () => {
+  const fetchSubtasks = useCallback(async () => {
     const result = await getSubtasksByParent(parentId);
     setSubtasks(result);
     setLoading(false);
-  };
+  }, [parentId]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- async data fetching
     fetchSubtasks();
-  }, [parentId]);
+  }, [fetchSubtasks]);
 
   // Don't allow subtasks on subtasks (parentType would be from a subtask issue)
   // Also EPIC and STORY are for grouping, so we show subtasks for TASK and BUG only at the detail level

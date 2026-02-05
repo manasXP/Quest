@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useTransition } from "react";
+import { useState, useEffect, useCallback, useTransition } from "react";
 import { ChevronDown, Star, Trash2, MoreHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -34,15 +34,16 @@ export function SavedFiltersDropdown({
   const [loading, setLoading] = useState(true);
   const [isPending, startTransition] = useTransition();
 
-  const fetchFilters = async () => {
+  const fetchFilters = useCallback(async () => {
     const result = await getSavedFilters(projectId);
     setFilters(result);
     setLoading(false);
-  };
+  }, [projectId]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- async data fetching
     fetchFilters();
-  }, [projectId, refreshTrigger]);
+  }, [fetchFilters, refreshTrigger]);
 
   const handleSelect = (filter: SavedFilter) => {
     onSelectFilter(filter.filters as IssueFilters);

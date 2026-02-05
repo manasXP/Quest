@@ -1,12 +1,12 @@
 "use client";
 
 import { useTransition } from "react";
-import { Bug, CheckSquare, Circle, CheckCircle2 } from "lucide-react";
+import { Bug, CheckSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { updateSubtaskStatus } from "@/server/actions/subtask";
-import type { Issue, IssueType, IssuePriority, IssueStatus } from "@prisma/client";
+import type { Issue, IssueType, IssuePriority } from "@prisma/client";
 
 interface SubtaskItemProps {
   subtask: Pick<Issue, "id" | "key" | "title" | "type" | "priority" | "status">;
