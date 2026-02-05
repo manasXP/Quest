@@ -68,9 +68,12 @@ quest/
     ├── hooks/
     │   └── use-platform.ts     # Platform detection
     └── components/
-        └── mobile/
-            ├── file-picker.tsx     # Native file/image picker
-            └── mobile-layout.tsx   # Safe areas & keyboard
+        ├── mobile/
+        │   ├── file-picker.tsx     # Native file/image picker
+        │   └── mobile-layout.tsx   # Safe areas & keyboard
+        └── workspace/
+            ├── workspace-sidebar.tsx   # Responsive sidebar + MobileSidebarTrigger
+            └── workspace-context.tsx   # Context for sharing workspace data
 ```
 
 ## Capacitor Plugins Installed
@@ -88,6 +91,41 @@ quest/
 | @capacitor/preferences | Secure key-value storage |
 | @capacitor/splash-screen | Splash screen control |
 | @capacitor/status-bar | Status bar styling |
+
+## Mobile UI Adaptations
+
+### Responsive Sidebar (Hamburger Menu)
+
+The workspace sidebar is responsive and adapts to screen size:
+
+| Screen Size | Behavior |
+|-------------|----------|
+| Desktop (≥768px) | Fixed sidebar on the left |
+| Mobile (<768px) | Sidebar hidden, hamburger menu in header |
+
+**How it works:**
+- On mobile, a hamburger menu icon (☰) appears in the header when viewing a workspace
+- Tapping the icon opens a slide-out drawer from the left with the full sidebar navigation
+- Selecting a navigation item automatically closes the drawer
+- The drawer can also be closed by tapping outside or swiping left
+
+**Components involved:**
+- `MobileSidebarTrigger` - Hamburger button that opens the Sheet drawer
+- `WorkspaceProvider` - Context that shares workspace data between layout and header
+- `WorkspaceSidebar` - Desktop sidebar (hidden on mobile via `hidden md:flex`)
+
+**Implementation:**
+```typescript
+// The sidebar uses Tailwind responsive classes
+<div className="hidden md:flex ...">  // Desktop only
+  <SidebarContent />
+</div>
+
+// Mobile trigger appears only on small screens
+<Button className="md:hidden ...">  // Mobile only
+  <Menu />
+</Button>
+```
 
 ## Native Features
 

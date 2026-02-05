@@ -12,10 +12,18 @@ import {
   Plus,
   ChevronRight,
   Loader2,
+  Menu,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetClose,
+} from "@/components/ui/sheet";
 import { CreateProjectDialog } from "@/components/project/create-project-dialog";
 import type { Workspace, Project } from "@prisma/client";
 
@@ -23,7 +31,14 @@ interface WorkspaceSidebarProps {
   workspace: Workspace & { projects: Project[] };
 }
 
-export function WorkspaceSidebar({ workspace }: WorkspaceSidebarProps) {
+// Extracted sidebar content for reuse
+function SidebarContent({
+  workspace,
+  onNavigate,
+}: {
+  workspace: Workspace & { projects: Project[] };
+  onNavigate?: () => void;
+}) {
   const pathname = usePathname();
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -34,6 +49,15 @@ export function WorkspaceSidebar({ workspace }: WorkspaceSidebarProps) {
     setLoadingProjectKey(projectKey);
     startTransition(() => {
       router.push(href);
+      onNavigate?.();
+    });
+  };
+
+  const handleNavClick = (e: React.MouseEvent, href: string) => {
+    e.preventDefault();
+    startTransition(() => {
+      router.push(href);
+      onNavigate?.();
     });
   };
 
@@ -58,17 +82,14 @@ export function WorkspaceSidebar({ workspace }: WorkspaceSidebarProps) {
   ];
 
   return (
-    <div className="flex h-full w-64 flex-col border-r bg-slate-50/50 dark:bg-slate-900/50">
-      <div className="p-4">
-        <h2 className="text-lg font-semibold truncate">{workspace.name}</h2>
-      </div>
-      <Separator />
+    <>
       <ScrollArea className="flex-1 px-3 py-4">
         <nav className="space-y-1">
           {navItems.map((item) => (
             <Link
               key={item.href}
               href={item.href}
+              onClick={(e) => handleNavClick(e, item.href)}
               className={cn(
                 "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
                 pathname === item.href
@@ -130,6 +151,55 @@ export function WorkspaceSidebar({ workspace }: WorkspaceSidebarProps) {
           </nav>
         </div>
       </ScrollArea>
+    </>
+  );
+}
+
+// Mobile sidebar trigger button
+export function MobileSidebarTrigger({
+  workspace,
+}: {
+  workspace: Workspace & { projects: Project[] };
+}) {
+  const [open, setOpen] = React.useState(false);
+
+  return (
+    <Sheet open={open} onOpenChange={setOpen}>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="md:hidden h-9 w-9"
+        onClick={() => setOpen(true)}
+      >
+        <Menu className="h-5 w-5" />
+        <span className="sr-only">Open menu</span>
+      </Button>
+      <SheetContent side="left" className="w-64 p-0" showCloseButton={false}>
+        <SheetHeader className="p-4 border-b">
+          <div className="flex items-center justify-between">
+            <SheetTitle className="truncate">{workspace.name}</SheetTitle>
+            <SheetClose asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8">
+                <span className="sr-only">Close</span>
+              </Button>
+            </SheetClose>
+          </div>
+        </SheetHeader>
+        <SidebarContent workspace={workspace} onNavigate={() => setOpen(false)} />
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+// Desktop sidebar (hidden on mobile)
+export function WorkspaceSidebar({ workspace }: WorkspaceSidebarProps) {
+  return (
+    <div className="hidden md:flex h-full w-64 flex-col border-r bg-slate-50/50 dark:bg-slate-900/50">
+      <div className="p-4">
+        <h2 className="text-lg font-semibold truncate">{workspace.name}</h2>
+      </div>
+      <Separator />
+      <SidebarContent workspace={workspace} />
     </div>
   );
 }

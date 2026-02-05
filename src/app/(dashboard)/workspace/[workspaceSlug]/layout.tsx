@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { getWorkspaceBySlug } from "@/server/queries/workspace";
 import { WorkspaceSidebar } from "@/components/workspace/workspace-sidebar";
+import { WorkspaceProvider } from "@/components/workspace/workspace-context";
 
 export default async function WorkspaceLayout({
   children,
@@ -17,9 +18,11 @@ export default async function WorkspaceLayout({
   }
 
   return (
-    <div className="flex h-[calc(100vh-3.5rem)]">
-      <WorkspaceSidebar workspace={workspace} />
-      <main className="flex-1 overflow-auto">{children}</main>
-    </div>
+    <WorkspaceProvider workspace={workspace}>
+      <div className="flex h-[calc(100vh-3.5rem)]">
+        <WorkspaceSidebar workspace={workspace} />
+        <main className="flex-1 overflow-auto">{children}</main>
+      </div>
+    </WorkspaceProvider>
   );
 }
