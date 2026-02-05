@@ -23,9 +23,9 @@ export function mockAuthenticatedUser(user: {
       name: user.name ?? "Test User",
       image: user.image ?? null,
     },
-  } as Session as Awaited<ReturnType<typeof auth>>);
+  } as unknown as Awaited<ReturnType<typeof auth>>);
 }
 
 export function mockUnauthenticated() {
-  vi.mocked(auth).mockResolvedValue(null as Awaited<ReturnType<typeof auth>>);
+  vi.mocked(auth).mockResolvedValue(null as unknown as Awaited<ReturnType<typeof auth>>);
 }
