@@ -40,7 +40,7 @@ export function DashboardHeader({
         {isInWorkspace ? (
           <>
             {/* This is a placeholder - the actual button is rendered by MobileSidebarTrigger in workspace layout */}
-            <div className="w-9 h-9 md:hidden" id="mobile-menu-slot" />
+            <div className="w-11 h-11 md:hidden" id="mobile-menu-slot" />
             <Link href="/workspace" className="font-bold text-xl hidden md:block">
               Quest
             </Link>

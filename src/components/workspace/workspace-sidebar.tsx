@@ -170,9 +170,9 @@ export function MobileSidebarTrigger({
         <Button
           variant="ghost"
           size="icon"
-          className="h-9 w-9"
+          className="h-11 w-11"
         >
-          <Menu className="h-5 w-5" />
+          <Menu className="h-6 w-6" />
           <span className="sr-only">Open menu</span>
         </Button>
       </SheetTrigger>
