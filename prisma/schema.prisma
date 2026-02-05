@@ -37,6 +37,7 @@ model User {
   savedFilters      SavedFilter[]
   notifications     Notification[]    @relation("NotificationRecipient")
   notificationsActed Notification[]   @relation("NotificationActor")
+  uploadedAttachments Attachment[]    @relation("AttachmentUploader")
 
   @@map("users")
 }
@@ -182,6 +183,7 @@ model Issue {
   comments      Comment[]
   activities    Activity[]
   notifications Notification[]
+  attachments   Attachment[]
 
   @@unique([projectId, key])
   @@index([projectId, status])
@@ -383,4 +385,25 @@ model Notification {
   @@index([userId, isRead])
   @@index([userId, createdAt])
   @@map("notifications")
+}
+
+// ============================================
+// Attachment Model
+// ============================================
+
+model Attachment {
+  id         String   @id @default(cuid())
+  filename   String
+  url        String
+  size       Int
+  mimeType   String
+  issueId    String
+  uploaderId String
+  createdAt  DateTime @default(now())
+
+  issue    Issue @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  uploader User  @relation("AttachmentUploader", fields: [uploaderId], references: [id])
+
+  @@index([issueId])
+  @@map("attachments")
 }

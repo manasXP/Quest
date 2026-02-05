@@ -25,6 +25,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CommentList } from "@/components/comment/comment-list";
 import { ActivityFeed } from "@/components/activity/activity-feed";
 import { SubtaskList } from "@/components/subtask/subtask-list";
+import { AttachmentList } from "@/components/attachment";
 import { updateIssue, deleteIssue } from "@/server/actions/issue";
 import type { Issue, User, IssueType, IssueStatus, IssuePriority } from "@prisma/client";
 
@@ -250,6 +251,7 @@ export function IssueDetailPanel({
             <TabsList variant="line" className="w-full justify-start">
               <TabsTrigger value="subtasks">Subtasks</TabsTrigger>
               <TabsTrigger value="comments">Comments</TabsTrigger>
+              <TabsTrigger value="attachments">Attachments</TabsTrigger>
               <TabsTrigger value="activity">Activity</TabsTrigger>
             </TabsList>
             <TabsContent value="subtasks" className="mt-4">
@@ -257,6 +259,9 @@ export function IssueDetailPanel({
             </TabsContent>
             <TabsContent value="comments" className="mt-4">
               <CommentList issueId={issue.id} currentUserId={currentUserId} />
+            </TabsContent>
+            <TabsContent value="attachments" className="mt-4">
+              <AttachmentList issueId={issue.id} currentUserId={currentUserId} />
             </TabsContent>
             <TabsContent value="activity" className="mt-4">
               <ActivityFeed issueId={issue.id} />

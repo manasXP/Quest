@@ -8,6 +8,7 @@ import type {
   Comment,
   Activity,
   Invitation,
+  Attachment,
   WorkspaceRole,
   IssueType,
   IssueStatus,
@@ -27,6 +28,7 @@ export type {
   Comment,
   Activity,
   Invitation,
+  Attachment,
   WorkspaceRole,
   IssueType,
   IssueStatus,
@@ -118,4 +120,9 @@ export type ActivityWithActor = Activity & {
 export type InvitationWithDetails = Invitation & {
   workspace: Pick<Workspace, "id" | "name" | "slug">;
   invitedBy: Pick<User, "id" | "name" | "email" | "image">;
+};
+
+// Attachment types
+export type AttachmentWithUploader = Attachment & {
+  uploader: Pick<User, "id" | "name" | "email" | "image">;
 };

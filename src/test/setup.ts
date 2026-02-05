@@ -30,12 +30,24 @@ vi.mock("@/lib/email", () => ({
   sendPasswordResetEmail: vi.fn(),
 }));
 
+// Mock @vercel/blob
+vi.mock("@vercel/blob", () => ({
+  put: vi.fn(),
+  del: vi.fn(),
+}));
+
 // Mock @/lib/db
 vi.mock("@/lib/db", () => ({
   db: {
     activity: {
       create: vi.fn(),
       findMany: vi.fn(),
+    },
+    attachment: {
+      create: vi.fn(),
+      findMany: vi.fn(),
+      findUnique: vi.fn(),
+      delete: vi.fn(),
     },
     comment: {
       create: vi.fn(),

@@ -7,9 +7,9 @@ User ─┬─< WorkspaceMember >─ Workspace
       │                         │
       │                         └─< Project
       │                               │
-      └─────────────────────────────< Issue >─ Comment
-                                        │
-                                        └─ Label
+      └─────────────────────────────< Issue >─┬─ Comment
+                                              ├─ Label
+                                              └─ Attachment
 ```
 
 ## Prisma Schema
@@ -165,6 +165,23 @@ model Comment {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+model Attachment {
+  id         String   @id @default(cuid())
+  filename   String
+  url        String   // Vercel Blob storage URL
+  size       Int      // File size in bytes
+  mimeType   String
+
+  issue      Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  issueId    String
+  uploader   User     @relation("AttachmentUploader", fields: [uploaderId], references: [id])
+  uploaderId String
+
+  createdAt  DateTime @default(now())
+
+  @@index([issueId])
+}
 ```
 
 ## Notes
@@ -173,3 +190,5 @@ model Comment {
 - Use `key` field in Project for human-readable issue identifiers
 - Subtasks link to parent issue via `parentId`
 - Labels are project-scoped for flexibility
+- Attachments are stored in Vercel Blob with metadata in the database
+- Attachments cascade delete when their parent issue is deleted
