@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { getProjectByKey } from "@/server/queries/project";
 import { getIssuesForBoard } from "@/server/queries/issue";
 import { getWorkspaceBySlug } from "@/server/queries/workspace";
+import { getProjectSprints } from "@/server/queries/sprint";
 import { BoardView } from "@/components/board/board-view";
 
 export default async function ProjectBoardPage({
@@ -27,7 +28,10 @@ export default async function ProjectBoardPage({
     notFound();
   }
 
-  const issues = await getIssuesForBoard(project.id);
+  const [issues, sprints] = await Promise.all([
+    getIssuesForBoard(project.id),
+    getProjectSprints(project.id),
+  ]);
 
   const members = workspace.members.map((m: { user: { id: string; name: string | null; email: string; image: string | null } }) => m.user);
 
@@ -36,6 +40,7 @@ export default async function ProjectBoardPage({
       project={project}
       issues={issues}
       members={members}
+      sprints={sprints}
       currentUserId={session.user.id}
     />
   );

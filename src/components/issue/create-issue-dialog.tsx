@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition, useRef } from "react";
-import { Upload, X, Paperclip } from "lucide-react";
+import { X, Paperclip, Flag, ChevronDown, ChevronUp } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -23,13 +23,29 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
+import { DatePicker } from "@/components/ui/date-picker";
+import { LabelSelector } from "@/components/label";
+import { SprintSelector } from "@/components/sprint";
+import { ParentIssueSelector } from "@/components/issue/parent-issue-selector";
+import { IssueLinkSelector } from "@/components/issue/issue-link-selector";
 import { createIssue } from "@/server/actions/issue";
+import { createIssueLink } from "@/server/actions/issue-link";
 import { MAX_FILE_SIZE, isAllowedFileType, formatFileSize } from "@/lib/upload";
-import type { User } from "@prisma/client";
+import { cn } from "@/lib/utils";
+import type { User, IssueType, IssueStatus, SprintStatus, LinkType } from "@prisma/client";
 
 interface CreateIssueDialogProps {
   projectId: string;
   members?: Pick<User, "id" | "name" | "email" | "image">[];
+  labels?: { id: string; name: string; color: string }[];
+  sprints?: { id: string; name: string; status: SprintStatus }[];
+  issues?: { id: string; key: string; title: string; type: IssueType }[];
   children?: React.ReactNode;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -43,6 +59,14 @@ const issueTypes = [
   { value: "EPIC", label: "Epic" },
 ] as const;
 
+const issueStatuses = [
+  { value: "BACKLOG", label: "Backlog" },
+  { value: "TODO", label: "To Do" },
+  { value: "IN_PROGRESS", label: "In Progress" },
+  { value: "IN_REVIEW", label: "In Review" },
+  { value: "DONE", label: "Done" },
+] as const;
+
 const priorities = [
   { value: "URGENT", label: "Urgent" },
   { value: "HIGH", label: "High" },
@@ -51,9 +75,48 @@ const priorities = [
   { value: "NONE", label: "None" },
 ] as const;
 
+const storyPointOptions = [1, 2, 3, 5, 8, 13, 21];
+
+interface FormState {
+  title: string;
+  description: string;
+  type: IssueType;
+  status: IssueStatus;
+  priority: "URGENT" | "HIGH" | "MEDIUM" | "LOW" | "NONE";
+  assigneeId: string | null;
+  sprintId: string | null;
+  parentId: string | null;
+  labelIds: string[];
+  startDate: Date | null;
+  dueDate: Date | null;
+  storyPoints: number | null;
+  flagged: boolean;
+  links: { type: LinkType; issueId: string }[];
+}
+
+const initialFormState: FormState = {
+  title: "",
+  description: "",
+  type: "TASK",
+  status: "BACKLOG",
+  priority: "MEDIUM",
+  assigneeId: null,
+  sprintId: null,
+  parentId: null,
+  labelIds: [],
+  startDate: null,
+  dueDate: null,
+  storyPoints: null,
+  flagged: false,
+  links: [],
+};
+
 export function CreateIssueDialog({
   projectId,
   members = [],
+  labels = [],
+  sprints = [],
+  issues = [],
   children,
   open,
   onOpenChange,
@@ -63,11 +126,19 @@ export function CreateIssueDialog({
   const [error, setError] = useState<string | null>(null);
   const [internalOpen, setInternalOpen] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [createAnother, setCreateAnother] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [form, setForm] = useState<FormState>(initialFormState);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
 
   const isControlled = open !== undefined;
   const isOpen = isControlled ? open : internalOpen;
   const setIsOpen = isControlled ? onOpenChange! : setInternalOpen;
+
+  const updateForm = <K extends keyof FormState>(key: K, value: FormState[K]) => {
+    setForm((prev) => ({ ...prev, [key]: value }));
+  };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -82,22 +153,21 @@ export function CreateIssueDialog({
         toast.error(`${file.name} has unsupported file type`);
         continue;
       }
-      // Check for duplicates
-      if (selectedFiles.some(f => f.name === file.name)) {
+      if (selectedFiles.some((f) => f.name === file.name)) {
         toast.error(`${file.name} is already selected`);
         continue;
       }
       validFiles.push(file);
     }
 
-    setSelectedFiles(prev => [...prev, ...validFiles]);
+    setSelectedFiles((prev) => [...prev, ...validFiles]);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
   };
 
   const removeFile = (fileName: string) => {
-    setSelectedFiles(prev => prev.filter(f => f.name !== fileName));
+    setSelectedFiles((prev) => prev.filter((f) => f.name !== fileName));
   };
 
   const uploadAttachments = async (issueId: string) => {
@@ -120,40 +190,113 @@ export function CreateIssueDialog({
     await Promise.all(uploadPromises);
   };
 
+  const createLinks = async (issueId: string) => {
+    const linkPromises = form.links.map((link) =>
+      createIssueLink({
+        type: link.type,
+        fromIssueId: issueId,
+        toIssueId: link.issueId,
+      })
+    );
+
+    await Promise.all(linkPromises);
+  };
+
+  const resetForm = (keepPersistent = false) => {
+    if (keepPersistent) {
+      // Keep: project, type, priority, sprint, assignee
+      setForm((prev) => ({
+        ...initialFormState,
+        type: prev.type,
+        priority: prev.priority,
+        sprintId: prev.sprintId,
+        assigneeId: prev.assigneeId,
+      }));
+    } else {
+      setForm(initialFormState);
+    }
+    setSelectedFiles([]);
+    setError(null);
+  };
+
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
 
-    const formData = new FormData(e.currentTarget);
-    const title = formData.get("title") as string;
-    const description = formData.get("description") as string;
-    const type = formData.get("type") as "EPIC" | "STORY" | "TASK" | "BUG";
-    const priority = formData.get("priority") as "URGENT" | "HIGH" | "MEDIUM" | "LOW" | "NONE";
-    const assigneeId = formData.get("assigneeId") as string;
+    if (!form.title.trim()) {
+      setError("Title is required");
+      return;
+    }
 
     startTransition(async () => {
       const result = await createIssue({
-        title,
-        description: description || undefined,
-        type,
-        priority,
+        title: form.title,
+        description: form.description || undefined,
+        type: form.type,
+        status: form.status,
+        priority: form.priority,
         projectId,
-        assigneeId: assigneeId === "unassigned" ? null : assigneeId || null,
+        assigneeId: form.assigneeId,
+        sprintId: form.sprintId,
+        parentId: form.parentId,
+        labelIds: form.labelIds.length > 0 ? form.labelIds : undefined,
+        startDate: form.startDate,
+        dueDate: form.dueDate,
+        storyPoints: form.storyPoints,
+        flagged: form.flagged,
       });
+
       if (result.error) {
         setError(result.error);
-      } else if (result.data) {
+        return;
+      }
+
+      if (result.data) {
+        let hasWarnings = false;
+
         // Upload attachments if any
         if (selectedFiles.length > 0) {
           try {
             await uploadAttachments(result.data.id);
-            toast.success(`Issue created with ${selectedFiles.length} attachment(s)`);
           } catch (uploadError) {
-            toast.error(uploadError instanceof Error ? uploadError.message : "Some attachments failed to upload");
+            hasWarnings = true;
+            toast.error(
+              uploadError instanceof Error
+                ? uploadError.message
+                : "Some attachments failed to upload"
+            );
           }
         }
-        setSelectedFiles([]);
-        setIsOpen(false);
+
+        // Create issue links if any
+        if (form.links.length > 0) {
+          try {
+            await createLinks(result.data.id);
+          } catch (linkError) {
+            hasWarnings = true;
+            toast.error("Some issue links failed to create");
+          }
+        }
+
+        if (!hasWarnings) {
+          const attachmentCount = selectedFiles.length;
+          const linkCount = form.links.length;
+          let message = "Issue created";
+          if (attachmentCount > 0 || linkCount > 0) {
+            const parts = [];
+            if (attachmentCount > 0) parts.push(`${attachmentCount} attachment(s)`);
+            if (linkCount > 0) parts.push(`${linkCount} link(s)`);
+            message += ` with ${parts.join(" and ")}`;
+          }
+          toast.success(message);
+        }
+
+        if (createAnother) {
+          resetForm(true);
+        } else {
+          resetForm();
+          setIsOpen(false);
+        }
         onSuccess?.();
       }
     });
@@ -161,101 +304,250 @@ export function CreateIssueDialog({
 
   const handleOpenChange = (open: boolean) => {
     if (!open) {
-      setError(null);
-      setSelectedFiles([]);
+      resetForm();
+      setShowAdvanced(false);
+      setCreateAnother(false);
     }
     setIsOpen(open);
   };
 
   const content = (
-    <DialogContent className="max-w-lg">
+    <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
       <DialogHeader>
         <DialogTitle>Create issue</DialogTitle>
         <DialogDescription>Add a new issue to the project.</DialogDescription>
       </DialogHeader>
-      <form onSubmit={handleSubmit}>
-        <div className="space-y-4 py-4">
+      <form ref={formRef} onSubmit={handleSubmit}>
+        <div className="space-y-6 py-4">
           {error && (
             <div className="bg-destructive/10 text-destructive text-sm p-3 rounded-md">
               {error}
             </div>
           )}
 
-          <div className="space-y-2">
-            <Label htmlFor="title">Title</Label>
-            <Input
-              id="title"
-              name="title"
-              placeholder="Issue title"
-              required
-              disabled={isPending}
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
+          {/* Core Section */}
+          <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="type">Type</Label>
-              <Select name="type" defaultValue="TASK" disabled={isPending}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {issueTypes.map((type) => (
-                    <SelectItem key={type.value} value={type.value}>
-                      {type.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label htmlFor="title">
+                Title <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id="title"
+                value={form.title}
+                onChange={(e) => updateForm("title", e.target.value)}
+                placeholder="Issue title"
+                required
+                disabled={isPending}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="type">Type</Label>
+                <Select
+                  value={form.type}
+                  onValueChange={(v) => updateForm("type", v as IssueType)}
+                  disabled={isPending}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {issueTypes.map((type) => (
+                      <SelectItem key={type.value} value={type.value}>
+                        {type.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="status">Status</Label>
+                <Select
+                  value={form.status}
+                  onValueChange={(v) => updateForm("status", v as IssueStatus)}
+                  disabled={isPending}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {issueStatuses.map((status) => (
+                      <SelectItem key={status.value} value={status.value}>
+                        {status.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="priority">Priority</Label>
-              <Select name="priority" defaultValue="MEDIUM" disabled={isPending}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {priorities.map((priority) => (
-                    <SelectItem key={priority.value} value={priority.value}>
-                      {priority.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label htmlFor="description">Description</Label>
+              <RichTextEditor
+                value={form.description}
+                onChange={(v) => updateForm("description", v)}
+                placeholder="Describe the issue..."
+                disabled={isPending}
+              />
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="assigneeId">Assignee</Label>
-            <Select name="assigneeId" defaultValue="unassigned" disabled={isPending}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select assignee" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="unassigned">Unassigned</SelectItem>
-                {members.map((member) => (
-                  <SelectItem key={member.id} value={member.id}>
-                    {member.name || member.email}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          {/* Assignment Section */}
+          <div className="space-y-4">
+            <h3 className="text-sm font-medium text-muted-foreground">Assignment</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="assigneeId">Assignee</Label>
+                <Select
+                  value={form.assigneeId || "unassigned"}
+                  onValueChange={(v) =>
+                    updateForm("assigneeId", v === "unassigned" ? null : v)
+                  }
+                  disabled={isPending}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select assignee" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="unassigned">Unassigned</SelectItem>
+                    {members.map((member) => (
+                      <SelectItem key={member.id} value={member.id}>
+                        {member.name || member.email}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="priority">Priority</Label>
+                <Select
+                  value={form.priority}
+                  onValueChange={(v) =>
+                    updateForm("priority", v as FormState["priority"])
+                  }
+                  disabled={isPending}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {priorities.map((priority) => (
+                      <SelectItem key={priority.value} value={priority.value}>
+                        {priority.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="description">Description (optional)</Label>
-            <Textarea
-              id="description"
-              name="description"
-              placeholder="Describe the issue..."
-              disabled={isPending}
-              rows={4}
-            />
+          {/* Planning Section */}
+          <div className="space-y-4">
+            <h3 className="text-sm font-medium text-muted-foreground">Planning</h3>
+            <div className="grid grid-cols-2 gap-4">
+              {sprints.length > 0 && (
+                <div className="space-y-2">
+                  <Label>Sprint</Label>
+                  <SprintSelector
+                    sprints={sprints}
+                    value={form.sprintId}
+                    onChange={(v) => updateForm("sprintId", v)}
+                    disabled={isPending}
+                    placeholder="Select sprint..."
+                  />
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <Label>Story Points</Label>
+                <Select
+                  value={form.storyPoints?.toString() || "none"}
+                  onValueChange={(v) =>
+                    updateForm("storyPoints", v === "none" ? null : parseInt(v))
+                  }
+                  disabled={isPending}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select points" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    {storyPointOptions.map((points) => (
+                      <SelectItem key={points} value={points.toString()}>
+                        {points}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {labels.length > 0 && (
+              <div className="space-y-2">
+                <Label>Labels</Label>
+                <LabelSelector
+                  labels={labels}
+                  selectedIds={form.labelIds}
+                  onChange={(ids) => updateForm("labelIds", ids)}
+                  disabled={isPending}
+                />
+              </div>
+            )}
+
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="flagged"
+                checked={form.flagged}
+                onCheckedChange={(checked) =>
+                  updateForm("flagged", checked === true)
+                }
+                disabled={isPending}
+              />
+              <Label
+                htmlFor="flagged"
+                className={cn(
+                  "flex items-center gap-1.5 cursor-pointer",
+                  form.flagged && "text-orange-600"
+                )}
+              >
+                <Flag
+                  className={cn("h-4 w-4", form.flagged && "fill-orange-600")}
+                />
+                Flag this issue
+              </Label>
+            </div>
           </div>
 
+          {/* Dates Section */}
+          <div className="space-y-4">
+            <h3 className="text-sm font-medium text-muted-foreground">Dates</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Start Date</Label>
+                <DatePicker
+                  value={form.startDate}
+                  onChange={(v) => updateForm("startDate", v)}
+                  disabled={isPending}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Due Date</Label>
+                <DatePicker
+                  value={form.dueDate}
+                  onChange={(v) => updateForm("dueDate", v)}
+                  disabled={isPending}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Attachments Section */}
           <div className="space-y-2">
-            <Label>Attachments (optional)</Label>
+            <Label>Attachments</Label>
             <input
               ref={fileInputRef}
               type="file"
@@ -296,26 +588,78 @@ export function CreateIssueDialog({
                 </div>
               ))}
             </div>
-            {selectedFiles.length > 0 && (
-              <p className="text-xs text-muted-foreground">
-                {selectedFiles.length} file(s) will be uploaded after issue creation
-              </p>
-            )}
           </div>
+
+          {/* Advanced Section (Collapsible) */}
+          <Collapsible open={showAdvanced} onOpenChange={setShowAdvanced}>
+            <CollapsibleTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="w-full justify-between"
+              >
+                <span>Relationships</span>
+                {showAdvanced ? (
+                  <ChevronUp className="h-4 w-4" />
+                ) : (
+                  <ChevronDown className="h-4 w-4" />
+                )}
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="space-y-4 pt-4">
+              {issues.length > 0 && (
+                <>
+                  <div className="space-y-2">
+                    <Label>Parent Issue</Label>
+                    <ParentIssueSelector
+                      issues={issues}
+                      value={form.parentId}
+                      onChange={(v) => updateForm("parentId", v)}
+                      disabled={isPending}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Linked Issues</Label>
+                    <IssueLinkSelector
+                      issues={issues}
+                      links={form.links}
+                      onChange={(v) => updateForm("links", v)}
+                      disabled={isPending}
+                    />
+                  </div>
+                </>
+              )}
+            </CollapsibleContent>
+          </Collapsible>
         </div>
 
-        <DialogFooter>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => handleOpenChange(false)}
-            disabled={isPending}
-          >
-            Cancel
-          </Button>
-          <Button type="submit" disabled={isPending}>
-            {isPending ? "Creating..." : "Create"}
-          </Button>
+        <DialogFooter className="flex-col sm:flex-row gap-2">
+          <div className="flex items-center gap-2 mr-auto">
+            <Checkbox
+              id="createAnother"
+              checked={createAnother}
+              onCheckedChange={(checked) => setCreateAnother(checked === true)}
+              disabled={isPending}
+            />
+            <Label htmlFor="createAnother" className="text-sm cursor-pointer">
+              Create another
+            </Label>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => handleOpenChange(false)}
+              disabled={isPending}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isPending}>
+              {isPending ? "Creating..." : "Create"}
+            </Button>
+          </div>
         </DialogFooter>
       </form>
     </DialogContent>

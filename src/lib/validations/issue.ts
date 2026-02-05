@@ -18,11 +18,16 @@ export const createIssueSchema = z.object({
     .max(200, "Title must be less than 200 characters"),
   description: z.string().max(10000, "Description is too long").optional(),
   type: issueTypeSchema.default("TASK"),
+  status: issueStatusSchema.default("BACKLOG"),
   priority: issuePrioritySchema.default("MEDIUM"),
   projectId: z.string().cuid("Invalid project ID"),
   assigneeId: z.string().cuid("Invalid user ID").nullable().optional(),
   dueDate: z.coerce.date().nullable().optional(),
+  startDate: z.coerce.date().nullable().optional(),
+  storyPoints: z.number().int().min(0).max(100).nullable().optional(),
+  flagged: z.boolean().default(false),
   parentId: z.string().cuid("Invalid issue ID").nullable().optional(),
+  sprintId: z.string().cuid("Invalid sprint ID").nullable().optional(),
   labelIds: z.array(z.string().cuid("Invalid label ID")).optional(),
 });
 

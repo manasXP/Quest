@@ -29,11 +29,16 @@ export async function createIssue(data: {
   title: string;
   description?: string;
   type?: "EPIC" | "STORY" | "TASK" | "BUG";
+  status?: IssueStatus;
   priority?: "URGENT" | "HIGH" | "MEDIUM" | "LOW" | "NONE";
   projectId: string;
   assigneeId?: string | null;
   dueDate?: Date | null;
+  startDate?: Date | null;
+  storyPoints?: number | null;
+  flagged?: boolean;
   parentId?: string | null;
+  sprintId?: string | null;
   labelIds?: string[];
 }) {
   const session = await auth();
@@ -75,11 +80,14 @@ export async function createIssue(data: {
     const issueNumber = await getNextIssueNumber(validated.data.projectId);
     const issueKey = `${project.key}-${issueNumber}`;
 
+    // Get the status (default to BACKLOG)
+    const status = validated.data.status || "BACKLOG";
+
     // Get max order for the status
     const maxOrder = await db.issue.aggregate({
       where: {
         projectId: validated.data.projectId,
-        status: "BACKLOG",
+        status,
       },
       _max: { order: true },
     });
@@ -91,12 +99,16 @@ export async function createIssue(data: {
         description: validated.data.description,
         type: validated.data.type || "TASK",
         priority: validated.data.priority || "MEDIUM",
-        status: "BACKLOG",
+        status,
         projectId: validated.data.projectId,
         reporterId: session.user.id,
         assigneeId: validated.data.assigneeId,
         dueDate: validated.data.dueDate,
+        startDate: validated.data.startDate,
+        storyPoints: validated.data.storyPoints,
+        flagged: validated.data.flagged || false,
         parentId: validated.data.parentId,
+        sprintId: validated.data.sprintId,
         order: (maxOrder._max.order || 0) + 1,
         labels: validated.data.labelIds
           ? {
@@ -112,6 +124,9 @@ export async function createIssue(data: {
         },
         labels: {
           include: { label: true },
+        },
+        sprint: {
+          select: { id: true, name: true, status: true },
         },
       },
     });

@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { getProjectByKey } from "@/server/queries/project";
 import { getBacklogIssues } from "@/server/queries/issue";
 import { getWorkspaceBySlug } from "@/server/queries/workspace";
+import { getProjectSprints } from "@/server/queries/sprint";
 import { Button } from "@/components/ui/button";
 import { BacklogView } from "@/components/backlog/backlog-view";
 import { CreateIssueDialog } from "@/components/issue/create-issue-dialog";
@@ -30,7 +31,10 @@ export default async function ProjectBacklogPage({
     notFound();
   }
 
-  const issues = await getBacklogIssues(project.id);
+  const [issues, sprints] = await Promise.all([
+    getBacklogIssues(project.id),
+    getProjectSprints(project.id),
+  ]);
   const members = workspace.members.map((m: { user: { id: string; name: string | null; email: string; image: string | null } }) => m.user);
 
   return (
@@ -42,7 +46,18 @@ export default async function ProjectBacklogPage({
             {issues.length} issue{issues.length !== 1 ? "s" : ""}
           </p>
         </div>
-        <CreateIssueDialog projectId={project.id} members={members}>
+        <CreateIssueDialog
+          projectId={project.id}
+          members={members}
+          labels={project.labels}
+          sprints={sprints}
+          issues={issues.map((i) => ({
+            id: i.id,
+            key: i.key,
+            title: i.title,
+            type: i.type,
+          }))}
+        >
           <Button>
             <Plus className="mr-2 h-4 w-4" />
             Create Issue

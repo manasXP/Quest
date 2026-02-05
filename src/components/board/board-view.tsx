@@ -19,7 +19,7 @@ import { BulkActionBar } from "@/components/bulk-actions/bulk-action-bar";
 import { useIssueFilters } from "@/hooks/use-issue-filters";
 import { useSelection } from "@/hooks/use-selection";
 import { moveIssue } from "@/server/actions/issue";
-import type { Issue, Project, User, IssueStatus } from "@prisma/client";
+import type { Issue, Project, User, IssueStatus, IssueType, SprintStatus } from "@prisma/client";
 
 type IssueWithRelations = Issue & {
   assignee: Pick<User, "id" | "name" | "email" | "image"> | null;
@@ -28,9 +28,12 @@ type IssueWithRelations = Issue & {
 };
 
 interface BoardViewProps {
-  project: Project;
+  project: Project & {
+    labels: { id: string; name: string; color: string }[];
+  };
   issues: IssueWithRelations[];
   members: Pick<User, "id" | "name" | "email" | "image">[];
+  sprints: { id: string; name: string; status: SprintStatus }[];
   currentUserId: string;
 }
 
@@ -46,6 +49,7 @@ export function BoardView({
   project,
   issues: initialIssues,
   members,
+  sprints,
   currentUserId,
 }: BoardViewProps) {
   const router = useRouter();
@@ -170,6 +174,14 @@ export function BoardView({
           <CreateIssueDialog
             projectId={project.id}
             members={members}
+            labels={project.labels}
+            sprints={sprints}
+            issues={initialIssues.map((i) => ({
+              id: i.id,
+              key: i.key,
+              title: i.title,
+              type: i.type,
+            }))}
             onSuccess={handleRefresh}
           >
             <Button>
