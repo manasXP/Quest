@@ -71,6 +71,21 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // Check for duplicate filename on this issue
+  const existingAttachment = await db.attachment.findFirst({
+    where: {
+      issueId,
+      filename: file.name,
+    },
+  });
+
+  if (existingAttachment) {
+    return NextResponse.json(
+      { error: "A file with this name already exists on this issue" },
+      { status: 409 }
+    );
+  }
+
   try {
     // Generate unique filename with timestamp
     const timestamp = Date.now();
