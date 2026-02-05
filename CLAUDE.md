@@ -65,6 +65,14 @@ quest/
 └── public/               # Static assets
 ```
 
+## Deployment
+
+- **Hosting:** Vercel (connected via GitHub)
+- **Auto-deploy:** Pushing to `main` triggers automatic production deployment
+- **Preview deployments:** Pull requests get automatic preview URLs
+
+No manual deployment steps required - just push to main.
+
 ## Key Patterns
 
 - Use Server Components by default, Client Components only when needed
