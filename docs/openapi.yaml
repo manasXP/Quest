@@ -1,0 +1,2374 @@
+openapi: 3.1.0
+info:
+  title: Quest API
+  description: |
+    REST API for Quest - a Jira-like project and task management system.
+
+    ## Authentication
+    All endpoints require authentication via session cookie (NextAuth.js) or Bearer token.
+
+    ## Base URL
+    - Production: `https://quest-manas-pradhans-projects.vercel.app`
+    - Development: `http://localhost:3000`
+
+    ## Notes for Mobile Developers
+    This API specification documents the full capabilities of Quest. Most endpoints are
+    proposed REST wrappers around Next.js Server Actions. File upload endpoints are
+    already implemented as REST endpoints.
+  version: 1.0.0
+  contact:
+    name: Quest Development Team
+
+servers:
+  - url: https://quest-manas-pradhans-projects.vercel.app
+    description: Production server
+  - url: http://localhost:3000
+    description: Development server
+
+tags:
+  - name: Auth
+    description: Authentication operations
+  - name: Workspaces
+    description: Workspace management
+  - name: Projects
+    description: Project management
+  - name: Issues
+    description: Issue management
+  - name: Comments
+    description: Comment management
+  - name: Attachments
+    description: File attachment management
+  - name: Notifications
+    description: Notification management
+  - name: Invitations
+    description: Workspace invitation management
+  - name: Filters
+    description: Saved filter management
+  - name: Bulk Operations
+    description: Bulk issue operations
+
+paths:
+  # ===========================================
+  # Authentication
+  # ===========================================
+  /api/auth/signup:
+    post:
+      tags: [Auth]
+      summary: Register a new user
+      operationId: signUp
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignUpRequest'
+      responses:
+        '200':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Validation error or user exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/auth/signin:
+    post:
+      tags: [Auth]
+      summary: Sign in with email and password
+      operationId: signIn
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignInRequest'
+      responses:
+        '200':
+          description: Sign in successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/auth/password-reset/request:
+    post:
+      tags: [Auth]
+      summary: Request password reset email
+      operationId: requestPasswordReset
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+                  format: email
+      responses:
+        '200':
+          description: Reset email sent (always returns success to prevent enumeration)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /api/auth/password-reset:
+    post:
+      tags: [Auth]
+      summary: Reset password with token
+      operationId: resetPassword
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetPasswordRequest'
+      responses:
+        '200':
+          description: Password reset successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Invalid or expired token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # ===========================================
+  # User Profile
+  # ===========================================
+  /api/users/me:
+    get:
+      tags: [Auth]
+      summary: Get current user profile
+      operationId: getCurrentUser
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: User profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    patch:
+      tags: [Auth]
+      summary: Update current user profile
+      operationId: updateProfile
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  minLength: 2
+                  maxLength: 100
+      responses:
+        '200':
+          description: Profile updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ===========================================
+  # Workspaces
+  # ===========================================
+  /api/workspaces:
+    get:
+      tags: [Workspaces]
+      summary: List user's workspaces
+      operationId: listWorkspaces
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of workspaces
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Workspace'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags: [Workspaces]
+      summary: Create a new workspace
+      operationId: createWorkspace
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWorkspaceRequest'
+      responses:
+        '201':
+          description: Workspace created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceResponse'
+        '400':
+          description: Validation error or slug taken
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/workspaces/{workspaceId}:
+    parameters:
+      - $ref: '#/components/parameters/WorkspaceId'
+
+    get:
+      tags: [Workspaces]
+      summary: Get workspace details
+      operationId: getWorkspace
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Workspace details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceWithMembers'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      tags: [Workspaces]
+      summary: Update workspace
+      operationId: updateWorkspace
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateWorkspaceRequest'
+      responses:
+        '200':
+          description: Workspace updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [Workspaces]
+      summary: Delete workspace
+      operationId: deleteWorkspace
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Workspace deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Only owner can delete
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ===========================================
+  # Projects
+  # ===========================================
+  /api/workspaces/{workspaceId}/projects:
+    parameters:
+      - $ref: '#/components/parameters/WorkspaceId'
+
+    get:
+      tags: [Projects]
+      summary: List projects in workspace
+      operationId: listProjects
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of projects
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Project'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags: [Projects]
+      summary: Create a new project
+      operationId: createProject
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProjectRequest'
+      responses:
+        '201':
+          description: Project created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectResponse'
+        '400':
+          description: Validation error or key taken
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/projects/{projectId}:
+    parameters:
+      - $ref: '#/components/parameters/ProjectId'
+
+    get:
+      tags: [Projects]
+      summary: Get project details
+      operationId: getProject
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Project details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      tags: [Projects]
+      summary: Update project
+      operationId: updateProject
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProjectRequest'
+      responses:
+        '200':
+          description: Project updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [Projects]
+      summary: Delete project
+      operationId: deleteProject
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Project deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Only admins can delete
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ===========================================
+  # Issues
+  # ===========================================
+  /api/projects/{projectId}/issues:
+    parameters:
+      - $ref: '#/components/parameters/ProjectId'
+
+    get:
+      tags: [Issues]
+      summary: List issues in project
+      operationId: listIssues
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/IssueStatus'
+        - name: assigneeId
+          in: query
+          schema:
+            type: string
+        - name: type
+          in: query
+          schema:
+            $ref: '#/components/schemas/IssueType'
+        - name: priority
+          in: query
+          schema:
+            $ref: '#/components/schemas/IssuePriority'
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of issues
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Issue'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags: [Issues]
+      summary: Create a new issue
+      operationId: createIssue
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateIssueRequest'
+      responses:
+        '201':
+          description: Issue created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IssueResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/issues/{issueId}:
+    parameters:
+      - $ref: '#/components/parameters/IssueId'
+
+    get:
+      tags: [Issues]
+      summary: Get issue details
+      operationId: getIssue
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Issue details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IssueWithRelations'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      tags: [Issues]
+      summary: Update issue
+      operationId: updateIssue
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateIssueRequest'
+      responses:
+        '200':
+          description: Issue updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IssueResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [Issues]
+      summary: Delete issue
+      operationId: deleteIssue
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Issue deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/issues/{issueId}/move:
+    parameters:
+      - $ref: '#/components/parameters/IssueId'
+
+    post:
+      tags: [Issues]
+      summary: Move issue (change status and order)
+      operationId: moveIssue
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status, order]
+              properties:
+                status:
+                  $ref: '#/components/schemas/IssueStatus'
+                order:
+                  type: integer
+      responses:
+        '200':
+          description: Issue moved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IssueResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ===========================================
+  # Subtasks
+  # ===========================================
+  /api/issues/{issueId}/subtasks:
+    parameters:
+      - $ref: '#/components/parameters/IssueId'
+
+    get:
+      tags: [Issues]
+      summary: List subtasks for an issue
+      operationId: listSubtasks
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of subtasks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Subtask'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags: [Issues]
+      summary: Create a subtask
+      operationId: createSubtask
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSubtaskRequest'
+      responses:
+        '201':
+          description: Subtask created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IssueResponse'
+        '400':
+          description: Validation error or cannot create subtask of subtask
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/subtasks/{subtaskId}/status:
+    parameters:
+      - name: subtaskId
+        in: path
+        required: true
+        schema:
+          type: string
+
+    patch:
+      tags: [Issues]
+      summary: Update subtask status
+      operationId: updateSubtaskStatus
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  $ref: '#/components/schemas/IssueStatus'
+      responses:
+        '200':
+          description: Status updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IssueResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ===========================================
+  # Comments
+  # ===========================================
+  /api/issues/{issueId}/comments:
+    parameters:
+      - $ref: '#/components/parameters/IssueId'
+
+    get:
+      tags: [Comments]
+      summary: List comments on an issue
+      operationId: listComments
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of comments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Comment'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags: [Comments]
+      summary: Add a comment to an issue
+      operationId: createComment
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content]
+              properties:
+                content:
+                  type: string
+                  minLength: 1
+                  maxLength: 10000
+      responses:
+        '201':
+          description: Comment created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommentResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/comments/{commentId}:
+    parameters:
+      - name: commentId
+        in: path
+        required: true
+        schema:
+          type: string
+
+    patch:
+      tags: [Comments]
+      summary: Update a comment
+      operationId: updateComment
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content]
+              properties:
+                content:
+                  type: string
+                  minLength: 1
+                  maxLength: 10000
+      responses:
+        '200':
+          description: Comment updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommentResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Can only edit own comments
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [Comments]
+      summary: Delete a comment
+      operationId: deleteComment
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Comment deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Only author, owner, or admin can delete
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ===========================================
+  # Attachments (IMPLEMENTED)
+  # ===========================================
+  /api/attachments/upload:
+    post:
+      tags: [Attachments]
+      summary: Upload a file attachment
+      description: |
+        **This endpoint is already implemented.**
+
+        Upload a file to attach to an issue. Files are stored in Vercel Blob storage.
+
+        Supported file types:
+        - Images: JPEG, PNG, GIF, WebP, SVG
+        - Documents: PDF, DOC, DOCX
+        - Spreadsheets: XLS, XLSX
+        - Presentations: PPT, PPTX
+        - Text: TXT, CSV, MD
+        - Archives: ZIP, RAR, GZ
+
+        Maximum file size: 10MB
+      operationId: uploadAttachment
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file, issueId]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: The file to upload (max 10MB)
+                issueId:
+                  type: string
+                  description: The issue ID to attach the file to
+      responses:
+        '201':
+          description: Attachment uploaded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AttachmentResponse'
+        '400':
+          description: No file, missing issueId, file too large, or invalid file type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: No access to the issue
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Issue not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/issues/{issueId}/attachments:
+    parameters:
+      - $ref: '#/components/parameters/IssueId'
+
+    get:
+      tags: [Attachments]
+      summary: List attachments for an issue
+      operationId: listAttachments
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of attachments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Attachment'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/attachments/{attachmentId}:
+    parameters:
+      - name: attachmentId
+        in: path
+        required: true
+        schema:
+          type: string
+
+    delete:
+      tags: [Attachments]
+      summary: Delete an attachment
+      operationId: deleteAttachment
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Attachment deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Only uploader, owner, or admin can delete
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ===========================================
+  # Activity
+  # ===========================================
+  /api/issues/{issueId}/activities:
+    parameters:
+      - $ref: '#/components/parameters/IssueId'
+
+    get:
+      tags: [Issues]
+      summary: Get activity feed for an issue
+      operationId: getIssueActivities
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Activity feed
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Activity'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ===========================================
+  # Notifications
+  # ===========================================
+  /api/notifications:
+    get:
+      tags: [Notifications]
+      summary: List user notifications
+      operationId: listNotifications
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+      responses:
+        '200':
+          description: List of notifications
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Notification'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/notifications/unread-count:
+    get:
+      tags: [Notifications]
+      summary: Get unread notification count
+      operationId: getUnreadCount
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Unread count
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/notifications/mark-all-read:
+    post:
+      tags: [Notifications]
+      summary: Mark all notifications as read
+      operationId: markAllRead
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: All marked as read
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/notifications/{notificationId}:
+    parameters:
+      - name: notificationId
+        in: path
+        required: true
+        schema:
+          type: string
+
+    patch:
+      tags: [Notifications]
+      summary: Mark notification as read
+      operationId: markAsRead
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Marked as read
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [Notifications]
+      summary: Delete notification
+      operationId: deleteNotification
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Notification deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ===========================================
+  # Invitations
+  # ===========================================
+  /api/workspaces/{workspaceId}/invitations:
+    parameters:
+      - $ref: '#/components/parameters/WorkspaceId'
+
+    get:
+      tags: [Invitations]
+      summary: List pending invitations
+      operationId: listInvitations
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of invitations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Invitation'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags: [Invitations]
+      summary: Send an invitation
+      operationId: createInvitation
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateInvitationRequest'
+      responses:
+        '201':
+          description: Invitation sent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvitationResponse'
+        '400':
+          description: User already member or invitation pending
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Only owners and admins can invite
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/invitations/{token}:
+    parameters:
+      - name: token
+        in: path
+        required: true
+        schema:
+          type: string
+
+    get:
+      tags: [Invitations]
+      summary: Get invitation details
+      operationId: getInvitation
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Invitation details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvitationWithWorkspace'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    post:
+      tags: [Invitations]
+      summary: Accept or reject invitation
+      operationId: respondToInvitation
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [accept]
+              properties:
+                accept:
+                  type: boolean
+      responses:
+        '200':
+          description: Response recorded
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    properties:
+                      workspaceSlug:
+                        type: string
+                  - type: object
+                    properties:
+                      rejected:
+                        type: boolean
+        '400':
+          description: Invitation expired or already responded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/invitations/{invitationId}/cancel:
+    parameters:
+      - name: invitationId
+        in: path
+        required: true
+        schema:
+          type: string
+
+    post:
+      tags: [Invitations]
+      summary: Cancel an invitation
+      operationId: cancelInvitation
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Invitation cancelled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: No permission to cancel
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/members/{memberId}:
+    parameters:
+      - name: memberId
+        in: path
+        required: true
+        schema:
+          type: string
+
+    delete:
+      tags: [Invitations]
+      summary: Remove a member from workspace
+      operationId: removeMember
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Member removed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Cannot remove workspace owner
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Only owners and admins can remove members
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ===========================================
+  # Saved Filters
+  # ===========================================
+  /api/projects/{projectId}/filters:
+    parameters:
+      - $ref: '#/components/parameters/ProjectId'
+
+    get:
+      tags: [Filters]
+      summary: List saved filters for a project
+      operationId: listFilters
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of saved filters
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SavedFilter'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags: [Filters]
+      summary: Create a saved filter
+      operationId: createFilter
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateFilterRequest'
+      responses:
+        '201':
+          description: Filter created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FilterResponse'
+        '400':
+          description: Filter name already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/filters/{filterId}:
+    parameters:
+      - name: filterId
+        in: path
+        required: true
+        schema:
+          type: string
+
+    patch:
+      tags: [Filters]
+      summary: Update a saved filter
+      operationId: updateFilter
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateFilterRequest'
+      responses:
+        '200':
+          description: Filter updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FilterResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Can only update own filters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [Filters]
+      summary: Delete a saved filter
+      operationId: deleteFilter
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Filter deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Can only delete own filters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ===========================================
+  # Bulk Operations
+  # ===========================================
+  /api/issues/bulk/status:
+    post:
+      tags: [Bulk Operations]
+      summary: Bulk update issue status
+      operationId: bulkUpdateStatus
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [issueIds, status]
+              properties:
+                issueIds:
+                  type: array
+                  items:
+                    type: string
+                  minItems: 1
+                  maxItems: 50
+                status:
+                  $ref: '#/components/schemas/IssueStatus'
+      responses:
+        '200':
+          description: Issues updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BulkResponse'
+        '400':
+          description: Some issues not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: No permission for some issues
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/issues/bulk/assign:
+    post:
+      tags: [Bulk Operations]
+      summary: Bulk assign issues
+      operationId: bulkAssign
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [issueIds]
+              properties:
+                issueIds:
+                  type: array
+                  items:
+                    type: string
+                  minItems: 1
+                  maxItems: 50
+                assigneeId:
+                  type: string
+                  nullable: true
+      responses:
+        '200':
+          description: Issues assigned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BulkResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/issues/bulk/priority:
+    post:
+      tags: [Bulk Operations]
+      summary: Bulk update issue priority
+      operationId: bulkUpdatePriority
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [issueIds, priority]
+              properties:
+                issueIds:
+                  type: array
+                  items:
+                    type: string
+                  minItems: 1
+                  maxItems: 50
+                priority:
+                  $ref: '#/components/schemas/IssuePriority'
+      responses:
+        '200':
+          description: Issues updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BulkResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/issues/bulk/delete:
+    post:
+      tags: [Bulk Operations]
+      summary: Bulk delete issues
+      operationId: bulkDelete
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [issueIds]
+              properties:
+                issueIds:
+                  type: array
+                  items:
+                    type: string
+                  minItems: 1
+                  maxItems: 50
+      responses:
+        '200':
+          description: Issues deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BulkResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: JWT or session token
+
+  parameters:
+    WorkspaceId:
+      name: workspaceId
+      in: path
+      required: true
+      schema:
+        type: string
+      description: Workspace ID (CUID)
+
+    ProjectId:
+      name: projectId
+      in: path
+      required: true
+      schema:
+        type: string
+      description: Project ID (CUID)
+
+    IssueId:
+      name: issueId
+      in: path
+      required: true
+      schema:
+        type: string
+      description: Issue ID (CUID)
+
+  responses:
+    Unauthorized:
+      description: Not authenticated
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: "Unauthorized"
+
+    Forbidden:
+      description: Not authorized to perform this action
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: "You don't have permission to perform this action"
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: "Not found"
+
+  schemas:
+    # ===========================================
+    # Common Response Types
+    # ===========================================
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          const: true
+
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+
+    BulkResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        count:
+          type: integer
+
+    # ===========================================
+    # Auth Schemas
+    # ===========================================
+    SignUpRequest:
+      type: object
+      required: [name, email, password]
+      properties:
+        name:
+          type: string
+          minLength: 2
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+          description: Must contain lowercase, uppercase, and number
+
+    SignInRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+
+    ResetPasswordRequest:
+      type: object
+      required: [token, password, confirmPassword]
+      properties:
+        token:
+          type: string
+        password:
+          type: string
+          minLength: 8
+        confirmPassword:
+          type: string
+
+    AuthResponse:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+        token:
+          type: string
+
+    # ===========================================
+    # User Schemas
+    # ===========================================
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+          nullable: true
+        email:
+          type: string
+          format: email
+        image:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+
+    UserSummary:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+          nullable: true
+        email:
+          type: string
+        image:
+          type: string
+          nullable: true
+
+    # ===========================================
+    # Workspace Schemas
+    # ===========================================
+    Workspace:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        slug:
+          type: string
+        image:
+          type: string
+          nullable: true
+        ownerId:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    WorkspaceWithMembers:
+      allOf:
+        - $ref: '#/components/schemas/Workspace'
+        - type: object
+          properties:
+            members:
+              type: array
+              items:
+                $ref: '#/components/schemas/WorkspaceMember'
+            owner:
+              $ref: '#/components/schemas/UserSummary'
+
+    WorkspaceMember:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        workspaceId:
+          type: string
+        role:
+          $ref: '#/components/schemas/WorkspaceRole'
+        createdAt:
+          type: string
+          format: date-time
+        user:
+          $ref: '#/components/schemas/UserSummary'
+
+    WorkspaceRole:
+      type: string
+      enum: [ADMIN, DEVELOPER, TESTER, GUEST]
+
+    CreateWorkspaceRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 50
+        slug:
+          type: string
+          pattern: '^[a-z0-9-]+$'
+          description: Auto-generated from name if not provided
+
+    UpdateWorkspaceRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 50
+        slug:
+          type: string
+          pattern: '^[a-z0-9-]+$'
+
+    WorkspaceResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/Workspace'
+
+    # ===========================================
+    # Project Schemas
+    # ===========================================
+    Project:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        key:
+          type: string
+          description: Project key for issue IDs (e.g., "QUEST")
+        description:
+          type: string
+          nullable: true
+        workspaceId:
+          type: string
+        leadId:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateProjectRequest:
+      type: object
+      required: [name, key]
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 50
+        key:
+          type: string
+          minLength: 2
+          maxLength: 10
+          pattern: '^[A-Z0-9]+$'
+          description: Uppercase letters and numbers only
+        description:
+          type: string
+          maxLength: 500
+
+    UpdateProjectRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 50
+        key:
+          type: string
+          minLength: 2
+          maxLength: 10
+        description:
+          type: string
+          maxLength: 500
+        leadId:
+          type: string
+          nullable: true
+
+    ProjectResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/Project'
+
+    # ===========================================
+    # Issue Schemas
+    # ===========================================
+    IssueType:
+      type: string
+      enum: [EPIC, STORY, TASK, BUG]
+
+    IssueStatus:
+      type: string
+      enum: [BACKLOG, TODO, IN_PROGRESS, IN_REVIEW, DONE, CANCELLED]
+
+    IssuePriority:
+      type: string
+      enum: [URGENT, HIGH, MEDIUM, LOW, NONE]
+
+    Issue:
+      type: object
+      properties:
+        id:
+          type: string
+        key:
+          type: string
+          description: Human-readable key (e.g., "QUEST-123")
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        type:
+          $ref: '#/components/schemas/IssueType'
+        status:
+          $ref: '#/components/schemas/IssueStatus'
+        priority:
+          $ref: '#/components/schemas/IssuePriority'
+        projectId:
+          type: string
+        assigneeId:
+          type: string
+          nullable: true
+        reporterId:
+          type: string
+        dueDate:
+          type: string
+          format: date-time
+          nullable: true
+        order:
+          type: integer
+        parentId:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    IssueWithRelations:
+      allOf:
+        - $ref: '#/components/schemas/Issue'
+        - type: object
+          properties:
+            assignee:
+              $ref: '#/components/schemas/UserSummary'
+              nullable: true
+            reporter:
+              $ref: '#/components/schemas/UserSummary'
+            labels:
+              type: array
+              items:
+                type: object
+                properties:
+                  label:
+                    $ref: '#/components/schemas/Label'
+            subtasks:
+              type: array
+              items:
+                $ref: '#/components/schemas/Subtask'
+
+    Subtask:
+      type: object
+      properties:
+        id:
+          type: string
+        key:
+          type: string
+        title:
+          type: string
+        type:
+          $ref: '#/components/schemas/IssueType'
+        status:
+          $ref: '#/components/schemas/IssueStatus'
+        priority:
+          $ref: '#/components/schemas/IssuePriority'
+
+    Label:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        color:
+          type: string
+          description: Hex color code
+
+    CreateIssueRequest:
+      type: object
+      required: [title]
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        description:
+          type: string
+          maxLength: 10000
+        type:
+          $ref: '#/components/schemas/IssueType'
+          default: TASK
+        priority:
+          $ref: '#/components/schemas/IssuePriority'
+          default: MEDIUM
+        assigneeId:
+          type: string
+          nullable: true
+        dueDate:
+          type: string
+          format: date-time
+          nullable: true
+        parentId:
+          type: string
+          nullable: true
+          description: For creating subtasks
+        labelIds:
+          type: array
+          items:
+            type: string
+
+    UpdateIssueRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        description:
+          type: string
+          maxLength: 10000
+          nullable: true
+        type:
+          $ref: '#/components/schemas/IssueType'
+        status:
+          $ref: '#/components/schemas/IssueStatus'
+        priority:
+          $ref: '#/components/schemas/IssuePriority'
+        assigneeId:
+          type: string
+          nullable: true
+        dueDate:
+          type: string
+          format: date-time
+          nullable: true
+        order:
+          type: integer
+        labelIds:
+          type: array
+          items:
+            type: string
+
+    IssueResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/IssueWithRelations'
+
+    CreateSubtaskRequest:
+      type: object
+      required: [title]
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        description:
+          type: string
+        type:
+          type: string
+          enum: [TASK, BUG]
+          default: TASK
+        priority:
+          $ref: '#/components/schemas/IssuePriority'
+        assigneeId:
+          type: string
+          nullable: true
+
+    # ===========================================
+    # Comment Schemas
+    # ===========================================
+    Comment:
+      type: object
+      properties:
+        id:
+          type: string
+        content:
+          type: string
+        issueId:
+          type: string
+        authorId:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        author:
+          $ref: '#/components/schemas/UserSummary'
+
+    CommentResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/Comment'
+
+    # ===========================================
+    # Attachment Schemas
+    # ===========================================
+    Attachment:
+      type: object
+      properties:
+        id:
+          type: string
+        filename:
+          type: string
+        url:
+          type: string
+          format: uri
+        size:
+          type: integer
+          description: File size in bytes
+        mimeType:
+          type: string
+        issueId:
+          type: string
+        uploaderId:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        uploader:
+          $ref: '#/components/schemas/UserSummary'
+
+    AttachmentResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/Attachment'
+
+    # ===========================================
+    # Activity Schemas
+    # ===========================================
+    ActivityAction:
+      type: string
+      enum:
+        - ISSUE_CREATED
+        - ISSUE_UPDATED
+        - ISSUE_DELETED
+        - ISSUE_STATUS_CHANGED
+        - ISSUE_ASSIGNED
+        - ISSUE_PRIORITY_CHANGED
+        - COMMENT_ADDED
+        - COMMENT_UPDATED
+        - COMMENT_DELETED
+
+    Activity:
+      type: object
+      properties:
+        id:
+          type: string
+        action:
+          $ref: '#/components/schemas/ActivityAction'
+        issueId:
+          type: string
+        actorId:
+          type: string
+        metadata:
+          type: object
+          nullable: true
+          properties:
+            field:
+              type: string
+            oldValue:
+              type: string
+              nullable: true
+            newValue:
+              type: string
+              nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        actor:
+          $ref: '#/components/schemas/UserSummary'
+
+    # ===========================================
+    # Notification Schemas
+    # ===========================================
+    NotificationType:
+      type: string
+      enum: [ISSUE_ASSIGNED, ISSUE_STATUS_CHANGED, COMMENT_ADDED]
+
+    Notification:
+      type: object
+      properties:
+        id:
+          type: string
+        type:
+          $ref: '#/components/schemas/NotificationType'
+        title:
+          type: string
+        message:
+          type: string
+          nullable: true
+        link:
+          type: string
+          nullable: true
+        userId:
+          type: string
+        actorId:
+          type: string
+          nullable: true
+        issueId:
+          type: string
+          nullable: true
+        isRead:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        actor:
+          $ref: '#/components/schemas/UserSummary'
+          nullable: true
+        issue:
+          type: object
+          nullable: true
+          properties:
+            id:
+              type: string
+            key:
+              type: string
+            title:
+              type: string
+
+    # ===========================================
+    # Invitation Schemas
+    # ===========================================
+    InvitationStatus:
+      type: string
+      enum: [PENDING, ACCEPTED, REJECTED, EXPIRED]
+
+    Invitation:
+      type: object
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+          format: email
+        role:
+          $ref: '#/components/schemas/WorkspaceRole'
+        workspaceId:
+          type: string
+        invitedById:
+          type: string
+        token:
+          type: string
+        status:
+          $ref: '#/components/schemas/InvitationStatus'
+        expiresAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+
+    InvitationWithWorkspace:
+      allOf:
+        - $ref: '#/components/schemas/Invitation'
+        - type: object
+          properties:
+            workspace:
+              type: object
+              properties:
+                id:
+                  type: string
+                name:
+                  type: string
+                slug:
+                  type: string
+            invitedBy:
+              $ref: '#/components/schemas/UserSummary'
+
+    CreateInvitationRequest:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+        role:
+          $ref: '#/components/schemas/WorkspaceRole'
+          default: DEVELOPER
+
+    InvitationResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/Invitation'
+
+    # ===========================================
+    # Filter Schemas
+    # ===========================================
+    IssueFilters:
+      type: object
+      properties:
+        search:
+          type: string
+        status:
+          type: array
+          items:
+            $ref: '#/components/schemas/IssueStatus'
+        type:
+          type: array
+          items:
+            $ref: '#/components/schemas/IssueType'
+        priority:
+          type: array
+          items:
+            $ref: '#/components/schemas/IssuePriority'
+        assigneeId:
+          type: array
+          items:
+            type: string
+        labelId:
+          type: array
+          items:
+            type: string
+
+    SavedFilter:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        filters:
+          $ref: '#/components/schemas/IssueFilters'
+        projectId:
+          type: string
+        userId:
+          type: string
+        isDefault:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateFilterRequest:
+      type: object
+      required: [name, filters]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 50
+        filters:
+          $ref: '#/components/schemas/IssueFilters'
+        isDefault:
+          type: boolean
+
+    UpdateFilterRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 50
+        filters:
+          $ref: '#/components/schemas/IssueFilters'
+        isDefault:
+          type: boolean
+
+    FilterResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/SavedFilter'
