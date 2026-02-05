@@ -28,6 +28,7 @@ This project follows the Obsidian vault conventions from the parent `ClaudeNotes
 - **Framework:** Next.js 14+ (App Router)
 - **Database:** PostgreSQL with Prisma ORM
 - **Auth:** NextAuth.js
+- **Email:** Resend
 - **Styling:** Tailwind CSS + shadcn/ui
 - **Language:** TypeScript
 
@@ -73,6 +74,34 @@ quest/
 - **Preview deployments:** Pull requests get automatic preview URLs
 
 No manual deployment steps required - just push to main.
+
+## Authentication
+
+- **Providers:** Credentials (email/password), Google OAuth, GitHub OAuth
+- **Password Reset:** Email-based flow using Resend
+  - User requests reset at `/forgot-password`
+  - Receives email with secure token (1-hour expiry)
+  - Sets new password at `/reset-password?token=...`
+
+## Environment Variables
+
+```bash
+# Database
+DATABASE_URL=postgresql://...
+
+# NextAuth
+AUTH_SECRET=...
+AUTH_GOOGLE_ID=...
+AUTH_GOOGLE_SECRET=...
+AUTH_GITHUB_ID=...
+AUTH_GITHUB_SECRET=...
+
+# Email (Resend)
+RESEND_API_KEY=re_...
+
+# App URL (for email links)
+NEXT_PUBLIC_APP_URL=http://localhost:3000  # or production URL
+```
 
 ## Key Patterns
 
