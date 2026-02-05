@@ -32,11 +32,19 @@ export const authConfig: NextAuthConfig = {
   callbacks: {
     authorized({ auth, request: { nextUrl } }) {
       const isLoggedIn = !!auth?.user;
-      const publicRoutes = ["/", "/sign-in", "/sign-up"];
+      const publicRoutes = [
+        "/",
+        "/sign-in",
+        "/sign-up",
+        "/forgot-password",
+        "/reset-password",
+      ];
       const isPublicRoute = publicRoutes.includes(nextUrl.pathname);
       const isAuthRoute =
         nextUrl.pathname.startsWith("/sign-in") ||
-        nextUrl.pathname.startsWith("/sign-up");
+        nextUrl.pathname.startsWith("/sign-up") ||
+        nextUrl.pathname.startsWith("/forgot-password") ||
+        nextUrl.pathname.startsWith("/reset-password");
       const isApiAuthRoute = nextUrl.pathname.startsWith("/api/auth");
 
       // Allow API auth routes

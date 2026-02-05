@@ -3,8 +3,14 @@
 import { db } from "@/lib/db";
 import { signIn } from "@/lib/auth";
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
 import { z } from "zod";
 import { AuthError } from "next-auth";
+import { sendPasswordResetEmail } from "@/lib/email";
+import {
+  requestPasswordResetSchema,
+  resetPasswordSchema,
+} from "@/lib/validations/password-reset";
 
 const signUpSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -94,4 +100,119 @@ export async function signInWithOAuth(
   await signIn(provider, {
     redirectTo: callbackUrl || "/workspace",
   });
+}
+
+export async function requestPasswordReset(data: { email: string }) {
+  const validated = requestPasswordResetSchema.safeParse(data);
+  if (!validated.success) {
+    return { error: validated.error.issues[0].message };
+  }
+
+  const { email } = validated.data;
+
+  try {
+    // Find user by email
+    const user = await db.user.findUnique({
+      where: { email },
+      select: { id: true, password: true },
+    });
+
+    // If user doesn't exist or is OAuth-only, return success anyway (prevent email enumeration)
+    if (!user || !user.password) {
+      return { success: true };
+    }
+
+    // Generate secure token
+    const token = crypto.randomBytes(32).toString("hex");
+    const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+
+    // Set expiry to 1 hour from now
+    const expires = new Date(Date.now() + 60 * 60 * 1000);
+
+    // Delete any existing tokens for this email
+    await db.verificationToken.deleteMany({
+      where: { identifier: email },
+    });
+
+    // Store hashed token in database
+    await db.verificationToken.create({
+      data: {
+        identifier: email,
+        token: hashedToken,
+        expires,
+      },
+    });
+
+    // Send email with unhashed token
+    await sendPasswordResetEmail(email, token);
+
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to request password reset:", error);
+    // Return success anyway to prevent email enumeration
+    return { success: true };
+  }
+}
+
+export async function resetPassword(data: {
+  token: string;
+  password: string;
+  confirmPassword: string;
+}) {
+  const validated = resetPasswordSchema.safeParse(data);
+  if (!validated.success) {
+    return { error: validated.error.issues[0].message };
+  }
+
+  const { token, password } = validated.data;
+
+  try {
+    // Hash the token to compare with stored hash
+    const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+
+    // Find the token in the database
+    const verificationToken = await db.verificationToken.findFirst({
+      where: {
+        token: hashedToken,
+        expires: { gt: new Date() },
+      },
+    });
+
+    if (!verificationToken) {
+      return { error: "Invalid or expired reset link" };
+    }
+
+    // Find the user by email
+    const user = await db.user.findUnique({
+      where: { email: verificationToken.identifier },
+    });
+
+    if (!user) {
+      return { error: "User not found" };
+    }
+
+    // Hash the new password
+    const hashedPassword = await bcrypt.hash(password, 12);
+
+    // Update the user's password
+    await db.user.update({
+      where: { id: user.id },
+      data: { password: hashedPassword },
+    });
+
+    // Delete the used token
+    await db.verificationToken.delete({
+      where: {
+        identifier_token: {
+          identifier: verificationToken.identifier,
+          token: hashedToken,
+        },
+      },
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to reset password:", error);
+    return { error: "Failed to reset password. Please try again." };
+  }
 }

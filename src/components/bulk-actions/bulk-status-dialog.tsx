@@ -52,7 +52,7 @@ export function BulkStatusDialog({ selectedIds, onSuccess }: BulkStatusDialogPro
         status,
       });
 
-      if (result.error) {
+      if ("error" in result && result.error) {
         setError(result.error);
       } else {
         setStatus("");

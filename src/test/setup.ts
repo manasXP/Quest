@@ -7,9 +7,27 @@ vi.mock("next/cache", () => ({
   revalidateTag: vi.fn(),
 }));
 
+// Mock next-auth
+vi.mock("next-auth", () => ({
+  default: vi.fn(),
+  AuthError: class AuthError extends Error {
+    type: string;
+    constructor(message?: string) {
+      super(message);
+      this.type = "CredentialsSignin";
+    }
+  },
+}));
+
 // Mock @/lib/auth
 vi.mock("@/lib/auth", () => ({
   auth: vi.fn(),
+  signIn: vi.fn(),
+}));
+
+// Mock @/lib/email
+vi.mock("@/lib/email", () => ({
+  sendPasswordResetEmail: vi.fn(),
 }));
 
 // Mock @/lib/db
@@ -58,6 +76,13 @@ vi.mock("@/lib/db", () => ({
     },
     user: {
       findUnique: vi.fn(),
+      update: vi.fn(),
+    },
+    verificationToken: {
+      create: vi.fn(),
+      findFirst: vi.fn(),
+      delete: vi.fn(),
+      deleteMany: vi.fn(),
     },
     savedFilter: {
       create: vi.fn(),
