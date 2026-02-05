@@ -95,11 +95,87 @@ model Attachment {
 
 ### Server Actions
 
+Server actions are called directly from React components (no HTTP endpoint).
+
 #### `getAttachmentsByIssue(issueId: string)`
-Returns all attachments for an issue, ordered by `createdAt` descending.
+
+Fetches all attachments for an issue.
+
+**Parameters:**
+- `issueId` (string) - The issue ID to fetch attachments for
+
+**Returns:** `Promise<AttachmentWithUploader[]>`
+
+```typescript
+// Response structure
+[
+  {
+    id: "cuid",
+    filename: "document.pdf",
+    url: "https://blob.vercel-storage.com/...",
+    size: 1024000,
+    mimeType: "application/pdf",
+    issueId: "cuid",
+    uploaderId: "cuid",
+    createdAt: "2024-01-01T00:00:00.000Z",
+    uploader: {
+      id: "cuid",
+      name: "User Name",
+      email: "user@example.com",
+      image: null
+    }
+  }
+]
+```
+
+**Usage:**
+```typescript
+import { getAttachmentsByIssue } from "@/server/actions/attachment";
+
+const attachments = await getAttachmentsByIssue("issue-id");
+```
+
+---
 
 #### `deleteAttachment(attachmentId: string)`
-Deletes an attachment from Vercel Blob and the database. Returns `{ success: true }` or `{ error: string }`.
+
+Deletes an attachment from Vercel Blob storage and the database.
+
+**Parameters:**
+- `attachmentId` (string) - The attachment ID to delete
+
+**Returns:** `Promise<{ success: true } | { error: string }>`
+
+**Success Response:**
+```json
+{ "success": true }
+```
+
+**Error Responses:**
+```json
+{ "error": "Unauthorized" }
+{ "error": "Attachment not found" }
+{ "error": "You don't have permission to delete this attachment" }
+{ "error": "Failed to delete attachment" }
+```
+
+**Permission Rules:**
+- Uploader can delete their own attachments
+- Workspace owner can delete any attachment
+- Workspace admin can delete any attachment
+- Other roles (Developer, Tester, Guest) cannot delete others' attachments
+
+**Usage:**
+```typescript
+import { deleteAttachment } from "@/server/actions/attachment";
+
+const result = await deleteAttachment("attachment-id");
+if (result.error) {
+  console.error(result.error);
+} else {
+  console.log("Deleted successfully");
+}
+```
 
 ## UI Components
 
