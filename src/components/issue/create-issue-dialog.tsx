@@ -345,27 +345,30 @@ export function CreateIssueDialog({
   };
 
   const content = (
-    <DialogContent className={cn(
-      "max-h-[90vh] overflow-y-auto",
-      isFullscreen ? "sm:max-w-[95vw] h-[95vh]" : "sm:max-w-[57rem]",
-      isMinimized && "hidden"
-    )}>
-      <DialogHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <div>
+    <DialogContent
+      className={cn(
+        "max-h-[90vh] overflow-y-auto",
+        isFullscreen ? "sm:max-w-[95vw] h-[95vh]" : "sm:max-w-[57rem]",
+        isMinimized && "hidden"
+      )}
+      showCloseButton={false}
+    >
+      <DialogHeader className="flex flex-row items-start justify-between space-y-0 pb-4">
+        <div className="flex-1">
           <DialogTitle>Create issue</DialogTitle>
           <DialogDescription>Required fields are marked with an asterisk *</DialogDescription>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-0.5 -mt-1 -mr-2">
           {/* Minimize */}
           <Button
             type="button"
             variant="ghost"
             size="icon"
-            className="h-8 w-8"
+            className="h-11 w-11"
             onClick={() => setIsMinimized(true)}
             title="Minimize"
           >
-            <Minus className="h-4 w-4" />
+            <Minus className="h-5 w-5" />
           </Button>
 
           {/* Fullscreen toggle */}
@@ -373,14 +376,14 @@ export function CreateIssueDialog({
             type="button"
             variant="ghost"
             size="icon"
-            className="h-8 w-8"
+            className="h-11 w-11"
             onClick={() => setIsFullscreen(!isFullscreen)}
             title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
           >
             {isFullscreen ? (
-              <Minimize2 className="h-4 w-4" />
+              <Minimize2 className="h-5 w-5" />
             ) : (
-              <Maximize2 className="h-4 w-4" />
+              <Maximize2 className="h-5 w-5" />
             )}
           </Button>
 
@@ -391,9 +394,9 @@ export function CreateIssueDialog({
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8"
+                className="h-11 w-11 data-[state=open]:bg-gray-200 data-[state=open]:border data-[state=open]:border-gray-300"
               >
-                <MoreHorizontal className="h-4 w-4" />
+                <MoreHorizontal className="h-5 w-5" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
@@ -435,6 +438,18 @@ export function CreateIssueDialog({
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+
+          {/* Close button */}
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-11 w-11"
+            onClick={() => handleOpenChange(false)}
+            title="Close"
+          >
+            <X className="h-5 w-5" />
+          </Button>
         </div>
       </DialogHeader>
       <form ref={formRef} onSubmit={handleSubmit}>
