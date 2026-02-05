@@ -15,8 +15,6 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { WorkspaceSwitcher } from "@/components/workspace/workspace-switcher";
 import { NotificationDropdown } from "@/components/notifications/notification-dropdown";
-import { MobileSidebarTrigger } from "@/components/workspace/workspace-sidebar";
-import { useWorkspace } from "@/components/workspace/workspace-context";
 import type { User, Workspace } from "@prisma/client";
 
 interface DashboardHeaderProps {
@@ -28,26 +26,18 @@ export function DashboardHeader({
   user,
   workspaces,
 }: DashboardHeaderProps) {
-  // Get current workspace from context (if in a workspace route)
-  const currentWorkspace = useWorkspace();
-
   return (
-    <header className="border-b bg-white dark:bg-slate-950 sticky top-0 z-50">
+    <header className="border-b bg-white dark:bg-slate-950 sticky top-0 z-40">
       <div className="flex h-14 items-center gap-2 px-4">
-        {/* Mobile sidebar trigger - only shows when in a workspace */}
-        {currentWorkspace && (
-          <MobileSidebarTrigger workspace={currentWorkspace} />
-        )}
+        {/* Spacer for mobile hamburger menu (rendered in workspace layout) */}
+        <div className="w-9 md:hidden" />
 
         <Link href="/workspace" className="font-bold text-xl">
           Quest
         </Link>
 
         <div className="w-48 hidden sm:block">
-          <WorkspaceSwitcher
-            workspaces={workspaces}
-            currentWorkspace={currentWorkspace ?? undefined}
-          />
+          <WorkspaceSwitcher workspaces={workspaces} />
         </div>
 
         <div className="ml-auto flex items-center gap-2">

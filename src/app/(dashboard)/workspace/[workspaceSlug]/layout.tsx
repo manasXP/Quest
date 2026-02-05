@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation";
 import { getWorkspaceBySlug } from "@/server/queries/workspace";
-import { WorkspaceSidebar } from "@/components/workspace/workspace-sidebar";
-import { WorkspaceProvider } from "@/components/workspace/workspace-context";
+import { WorkspaceSidebar, MobileSidebarTrigger } from "@/components/workspace/workspace-sidebar";
 
 export default async function WorkspaceLayout({
   children,
@@ -18,11 +17,13 @@ export default async function WorkspaceLayout({
   }
 
   return (
-    <WorkspaceProvider workspace={workspace}>
-      <div className="flex h-[calc(100vh-3.5rem)]">
-        <WorkspaceSidebar workspace={workspace} />
-        <main className="flex-1 overflow-auto">{children}</main>
+    <div className="flex h-[calc(100vh-3.5rem)]">
+      {/* Mobile hamburger menu - fixed position in top left */}
+      <div className="fixed top-[0.625rem] left-2 z-50 md:hidden">
+        <MobileSidebarTrigger workspace={workspace} />
       </div>
-    </WorkspaceProvider>
+      <WorkspaceSidebar workspace={workspace} />
+      <main className="flex-1 overflow-auto">{children}</main>
+    </div>
   );
 }
