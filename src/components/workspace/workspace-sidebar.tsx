@@ -23,6 +23,7 @@ import {
   SheetHeader,
   SheetTitle,
   SheetClose,
+  SheetTrigger,
 } from "@/components/ui/sheet";
 import { CreateProjectDialog } from "@/components/project/create-project-dialog";
 import type { Workspace, Project } from "@prisma/client";
@@ -165,16 +166,17 @@ export function MobileSidebarTrigger({
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
-      <Button
-        variant="ghost"
-        size="icon"
-        className="md:hidden h-9 w-9"
-        onClick={() => setOpen(true)}
-      >
-        <Menu className="h-5 w-5" />
-        <span className="sr-only">Open menu</span>
-      </Button>
-      <SheetContent side="left" className="w-64 p-0" showCloseButton={false}>
+      <SheetTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-9 w-9"
+        >
+          <Menu className="h-5 w-5" />
+          <span className="sr-only">Open menu</span>
+        </Button>
+      </SheetTrigger>
+      <SheetContent side="left" className="w-72 p-0" showCloseButton={false}>
         <SheetHeader className="p-4 border-b">
           <div className="flex items-center justify-between">
             <SheetTitle className="truncate">{workspace.name}</SheetTitle>
