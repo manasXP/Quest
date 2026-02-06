@@ -18,8 +18,11 @@ export default async function WorkspaceLayout({
 
   return (
     <div className="flex h-[calc(100vh-3.5rem)]">
-      {/* Mobile hamburger menu - positioned in header area, z-[60] to be above header */}
-      <div className="fixed top-0 left-0 h-14 flex items-center px-2 z-[60] md:hidden">
+      {/* Mobile hamburger menu - positioned in header with safe area inset */}
+      <div
+        className="fixed left-0 h-14 flex items-center px-2 z-[60] md:hidden"
+        style={{ top: 'env(safe-area-inset-top, 0px)' }}
+      >
         <MobileSidebarTrigger workspace={workspace} />
       </div>
       <WorkspaceSidebar workspace={workspace} />

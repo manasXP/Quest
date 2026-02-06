@@ -34,7 +34,7 @@ export function DashboardHeader({
   const isInWorkspace = !!workspaceMatch;
 
   return (
-    <header className="border-b bg-white dark:bg-slate-950 sticky top-0 z-50">
+    <header className="border-b bg-white dark:bg-slate-950 sticky top-0 z-50 pt-[env(safe-area-inset-top)]">
       <div className="flex h-14 items-center gap-2 px-4">
         {/* Mobile: Show menu button placeholder if in workspace (actual trigger rendered by workspace layout) */}
         {isInWorkspace ? (
